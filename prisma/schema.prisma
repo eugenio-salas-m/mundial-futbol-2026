@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  super_admin
+  organization_admin
+  participant
+}
+
+enum OrganizationStatus {
+  active
+  suspended
+}
+
+enum InvitationType {
+  individual
+  group
+}
+
+enum MatchStage {
+  group_stage
+  round_of_32
+  round_of_16
+  quarter_final
+  semi_final
+  third_place
+  final
+}
+
+enum MatchStatus {
+  scheduled
+  closed
+  finished
+}
+
+enum NotificationChannel {
+  email
+  whatsapp
+  internal
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
+enum NotificationTargetType {
+  user
+  organization_group
+}
+
+model Organization {
+  id                     String             @id @default(uuid()) @db.Uuid
+  name                   String             @db.VarChar(150)
+  logoUrl                String?            @map("logo_url")
+  status                 OrganizationStatus @default(active)
+  adminUserId            String?            @map("admin_user_id") @db.Uuid
+  whatsappGroupInviteUrl String?            @map("whatsapp_group_invite_url")
+  whatsappGroupId        String?            @map("whatsapp_group_id") @db.VarChar(100)
+  whatsappGroupEnabled   Boolean            @default(false) @map("whatsapp_group_enabled")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+
+  users              User[]
+  invitations        Invitation[]
+  activityFeedEvents ActivityFeedEvent[]
+  notificationLogs   NotificationLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationRequest {
+  id               String    @id @default(uuid()) @db.Uuid
+  organizationName String    @map("organization_name") @db.VarChar(150)
+  applicantName    String    @map("applicant_name") @db.VarChar(150)
+  applicantEmail   String    @map("applicant_email") @db.VarChar(200)
+  comments         String?
+  status           String    @default("pending") @db.VarChar(30)
+  reviewedAt       DateTime? @map("reviewed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@map("organization_requests")
+}
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  authUserId     String?   @unique @map("auth_user_id") @db.Uuid
+  organizationId String?   @map("organization_id") @db.Uuid
+  email          String    @unique @db.VarChar(200)
+  nickname       String    @db.VarChar(80)
+  avatarUrl      String?   @map("avatar_url")
+  role           UserRole  @default(participant)
+  whatsappNumber String?   @map("whatsapp_number") @db.VarChar(30)
+  whatsappOptIn  Boolean   @default(false) @map("whatsapp_opt_in")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastLoginAt    DateTime? @map("last_login_at")
+
+  organization       Organization?           @relation(fields: [organizationId], references: [id])
+  createdInvitations Invitation[]
+  predictions        Prediction[]
+  scores             Score[]
+  standing           UserStanding?
+  achievements       UserAchievement[]
+  notificationPref   NotificationPreference?
+  notificationLogs   NotificationLog[]
+  feedEvents         ActivityFeedEvent[]
+  registeredResults  MatchResult[]
+
+  @@index([organizationId])
+  @@index([role])
+  @@map("users")
+}
+
+model Invitation {
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  createdByUserId String         @map("created_by_user_id") @db.Uuid
+  tokenHash       String         @unique @map("token_hash")
+  type            InvitationType
+  email           String?        @db.VarChar(200)
+  maxUses         Int?           @map("max_uses")
+  usedCount       Int            @default(0) @map("used_count")
+  expiresAt       DateTime?      @map("expires_at")
+  revokedAt       DateTime?      @map("revoked_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  createdBy    User         @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([type])
+  @@map("invitations")
+}
+
+model Team {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  fifaCode  String   @unique @map("fifa_code") @db.VarChar(10)
+  flagUrl   String?  @map("flag_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  homeMatches          Match[]       @relation("HomeTeam")
+  awayMatches          Match[]       @relation("AwayTeam")
+  qualifiedResults     MatchResult[]
+  qualifiedPredictions Prediction[]
+
+  @@map("teams")
+}
+
+model Match {
+  id                 String      @id @default(uuid()) @db.Uuid
+  homeTeamId         String      @map("home_team_id") @db.Uuid
+  awayTeamId         String      @map("away_team_id") @db.Uuid
+  stage              MatchStage
+  groupCode          String?     @map("group_code") @db.VarChar(10)
+  startsAtChile      DateTime    @map("starts_at_chile")
+  predictionClosesAt DateTime    @map("prediction_closes_at")
+  status             MatchStatus @default(scheduled)
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  homeTeam         Team              @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam         Team              @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  result           MatchResult?
+  predictions      Prediction[]
+  scores           Score[]
+  notificationLogs NotificationLog[]
+
+  @@index([startsAtChile])
+  @@index([status])
+  @@index([stage])
+  @@index([groupCode])
+  @@map("matches")
+}
+
+model MatchResult {
+  id                 String   @id @default(uuid()) @db.Uuid
+  matchId            String   @unique @map("match_id") @db.Uuid
+  homeGoals          Int      @map("home_goals")
+  awayGoals          Int      @map("away_goals")
+  qualifiedTeamId    String?  @map("qualified_team_id") @db.Uuid
+  registeredByUserId String   @map("registered_by_user_id") @db.Uuid
+  registeredAt       DateTime @default(now()) @map("registered_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  match         Match @relation(fields: [matchId], references: [id])
+  qualifiedTeam Team? @relation(fields: [qualifiedTeamId], references: [id])
+  registeredBy  User  @relation(fields: [registeredByUserId], references: [id])
+
+  @@map("match_results")
+}
+
+model Prediction {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  matchId         String   @map("match_id") @db.Uuid
+  homeGoals       Int      @map("home_goals")
+  awayGoals       Int      @map("away_goals")
+  qualifiedTeamId String?  @map("qualified_team_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user          User  @relation(fields: [userId], references: [id])
+  match         Match @relation(fields: [matchId], references: [id])
+  qualifiedTeam Team? @relation(fields: [qualifiedTeamId], references: [id])
+
+  @@unique([userId, matchId])
+  @@index([userId])
+  @@index([matchId])
+  @@map("predictions")
+}
+
+model Score {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  matchId          String   @map("match_id") @db.Uuid
+  points           Int      @default(0)
+  resultPoints     Int      @default(0) @map("result_points")
+  exactScorePoints Int      @default(0) @map("exact_score_points")
+  qualifiedPoints  Int      @default(0) @map("qualified_points")
+  calculatedAt     DateTime @default(now()) @map("calculated_at")
+
+  user  User  @relation(fields: [userId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@unique([userId, matchId])
+  @@index([userId])
+  @@index([matchId])
+  @@map("scores")
+}
+
+model UserStanding {
+  userId           String   @id @map("user_id") @db.Uuid
+  totalPoints      Int      @default(0) @map("total_points")
+  organizationRank Int?     @map("organization_rank")
+  globalRank       Int?     @map("global_rank")
+  currentStreak    Int      @default(0) @map("current_streak")
+  bestStreak       Int      @default(0) @map("best_streak")
+  exactScoresCount Int      @default(0) @map("exact_scores_count")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([totalPoints])
+  @@index([organizationRank])
+  @@index([globalRank])
+  @@map("user_standings")
+}
+
+model Achievement {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(80)
+  name        String   @db.VarChar(120)
+  description String?
+  iconUrl     String?  @map("icon_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  userId        String   @map("user_id") @db.Uuid
+  achievementId String   @map("achievement_id") @db.Uuid
+  earnedAt      DateTime @default(now()) @map("earned_at")
+
+  user        User        @relation(fields: [userId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@id([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model ActivityFeedEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  eventType      String   @map("event_type") @db.VarChar(60)
+  payload        Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([createdAt])
+  @@index([eventType])
+  @@map("activity_feed_events")
+}
+
+model NotificationPreference {
+  userId          String   @id @map("user_id") @db.Uuid
+  emailEnabled    Boolean  @default(true) @map("email_enabled")
+  whatsappEnabled Boolean  @default(true) @map("whatsapp_enabled")
+  internalEnabled Boolean  @default(true) @map("internal_enabled")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notification_preferences")
+}
+
+model NotificationLog {
+  id             String                 @id @default(uuid()) @db.Uuid
+  userId         String?                @map("user_id") @db.Uuid
+  organizationId String?                @map("organization_id") @db.Uuid
+  matchId        String?                @map("match_id") @db.Uuid
+  targetType     NotificationTargetType @default(user) @map("target_type")
+  channel        NotificationChannel
+  templateCode   String                 @map("template_code") @db.VarChar(80)
+  status         NotificationStatus
+  sentAt         DateTime?              @map("sent_at")
+  errorMessage   String?                @map("error_message")
+  createdAt      DateTime               @default(now()) @map("created_at")
+
+  user         User?         @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  match        Match?        @relation(fields: [matchId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notification_logs")
+}
