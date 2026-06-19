@@ -52,20 +52,24 @@ export async function POST(
       59
     );
 
+  const chileToday =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          "America/Santiago",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }
+    ).format(
+      new Date()
+    );
+
   const matches =
     await prisma.match.findMany({
 
-      where: {
-
-        startsAtChile: {
-
-          gte: start,
-
-          lte: end
-
-        }
-
-      },
+      where: { },
 
       include: {
 
@@ -98,8 +102,36 @@ export async function POST(
 
     });
 
+  const todayMatches =
+    matches.filter(
+      match => {
+  
+        const matchDate =
+          new Intl.DateTimeFormat(
+            "en-CA",
+            {
+              timeZone:
+                "America/Santiago",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit"
+            }
+          ).format(
+            new Date(
+              match.startsAtChile
+            )
+          );
+  
+        return (
+          matchDate ===
+          chileToday
+        );
+  
+      }
+    );
+
   return NextResponse.json(
-    matches
+    todayMatches
   );
 
 }

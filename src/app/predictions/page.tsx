@@ -332,7 +332,12 @@ export default function PredictionsPage() {
 
                                 const editable =
                                   match.status ===
-                                  "scheduled";
+                                    "scheduled"
+                                  &&
+                                  new Date() <
+                                    new Date(
+                                      match.startsAtChile
+                                    );
 
                                 const score =
                                   match.scores?.[0];
