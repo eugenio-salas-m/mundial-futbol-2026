@@ -26,20 +26,49 @@ export async function POST(request: Request) {
         authUserId,
         email,
         nickname,
-        avatarUrl,
+        googleAvatarUrl:
+          avatarUrl,
+        avatarUrl:
+          avatarUrl,
+        avatarMode:
+          "google",
         role: "participant"
       }
     });
 
   } else {
 
+    const updateData: any = {
+
+      lastLoginAt:
+        new Date(),
+  
+      email,
+  
+      googleAvatarUrl:
+        avatarUrl
+  
+    };
+  
+    if (
+      user.avatarMode ===
+      "google"
+    ) {
+  
+      updateData.avatarUrl =
+        avatarUrl;
+  
+    }
+  
     user = await prisma.user.update({
+  
       where: {
         id: user.id
       },
-      data: {
-        lastLoginAt: new Date()
-      }
+  
+      data:
+        updateData
+  
     });
 
   }

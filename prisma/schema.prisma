@@ -57,6 +57,11 @@ enum NotificationTargetType {
   organization_group
 }
 
+enum AvatarMode {
+  google
+  ai
+}
+
 model Organization {
   id                     String             @id @default(uuid()) @db.Uuid
   name                   String             @db.VarChar(150)
@@ -105,6 +110,11 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   lastLoginAt    DateTime? @map("last_login_at")
+  avatarMode        AvatarMode @default(google)
+  googleAvatarUrl   String?
+  aiAvatarUrl       String?
+  avatarPrompt      String?
+  avatarGeneratedAt DateTime?
 
   organization       Organization?           @relation(fields: [organizationId], references: [id])
   createdInvitations Invitation[]

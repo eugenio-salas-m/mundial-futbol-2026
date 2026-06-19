@@ -388,6 +388,7 @@ export default function AuthenticatedHome() {
       
       <img
         src={
+          currentUser?.avatarUrl ??
           user.user_metadata
             ?.avatar_url
         }
@@ -398,10 +399,20 @@ export default function AuthenticatedHome() {
           rounded-full
         "
       />
-
+      <a
+        href="/profile"
+        className="
+          text-gray-500
+          hover:text-gray-700
+        "
+        style={{lineHeight: 0}}
+      >
+        ✏️ 
+      </a>
       <h2 className="text-2xl">
 
         Hola {
+          currentUser?.nickname ??
           user.user_metadata
             ?.full_name
         }
