@@ -66,6 +66,12 @@ export async function POST(
           role:
             participant.role,
 
+          whatsappNumber:
+            participant.whatsappNumber,
+
+          whatsappOptIn:
+            participant.whatsappOptIn,
+
           totalPoints:
             participant.scores.reduce(
               (

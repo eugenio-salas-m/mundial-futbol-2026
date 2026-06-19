@@ -17,6 +17,20 @@ export default function OrganizationPage() {
     setData] =
     useState<any>(null);
 
+    const [selectedParticipant,
+      setSelectedParticipant] =
+      useState<any>(null);
+    
+    const [selectedTemplate,
+      setSelectedTemplate] =
+      useState(
+        "reminder_prediction"
+      );
+    
+    const [sending,
+      setSending] =
+      useState(false);
+
   useEffect(() => {
 
     const loadData =
@@ -602,12 +616,64 @@ export default function OrganizationPage() {
 
                     <div
                       className="
-                        font-bold
+                        flex
+                        items-center
+                        gap-4
                       "
                     >
+
+                      <div
+                        className="
+                          font-bold
+                        "
+                      >
+                        {
+                          participant.totalPoints
+                        } pts
+                      </div>
+
                       {
-                        participant.totalPoints
-                      } pts
+                        participant.whatsappNumber &&
+                        participant.whatsappOptIn && (
+
+                          <button
+                            onClick={() =>
+                              setSelectedParticipant(
+                                participant
+                              )
+                            }
+                            className="
+                              hover:scale-110
+                              transition
+                            "
+                            title="Enviar WhatsApp"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 32 32"
+                              className="
+                                w-7
+                                h-7
+                              "
+                            >
+
+                              <path
+                                fill="#25D366"
+                                d="M16 3C8.82 3 3 8.82 3 16c0 2.56.75 5.05 2.16 7.18L3 29l5.98-2.12A12.93 12.93 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3z"
+                              />
+
+                              <path
+                                fill="#FFF"
+                                d="M22.46 18.84c-.35-.18-2.08-1.03-2.4-1.14-.32-.12-.55-.18-.78.18-.23.35-.9 1.14-1.1 1.37-.2.23-.41.26-.76.09-.35-.18-1.48-.54-2.82-1.71-1.04-.93-1.75-2.08-1.96-2.43-.2-.35-.02-.54.15-.71.15-.15.35-.41.52-.61.17-.2.23-.35.35-.58.12-.23.06-.44-.03-.61-.09-.18-.78-1.88-1.07-2.57-.28-.68-.57-.58-.78-.59h-.66c-.23 0-.61.09-.93.44-.32.35-1.22 1.19-1.22 2.9s1.25 3.37 1.42 3.61c.18.23 2.46 3.76 5.97 5.27.84.36 1.5.58 2.02.74.85.27 1.63.23 2.24.14.68-.1 2.08-.85 2.38-1.67.29-.82.29-1.52.2-1.67-.08-.15-.31-.23-.66-.41z"
+                              />
+
+                            </svg>
+
+                          </button>
+
+                        )
+                      }
+
                     </div>
 
                   </div>
@@ -623,6 +689,283 @@ export default function OrganizationPage() {
 
       </div>
 
+      {
+        selectedParticipant && (
+
+          <div
+            className="
+              fixed
+              inset-0
+              bg-black/50
+              flex
+              items-center
+              justify-center
+              z-50
+            "
+            onClick={() =>
+              setSelectedParticipant(
+                null
+              )
+            }
+          >
+
+            <div
+              className="
+                bg-white
+                rounded-lg
+                p-6
+                w-full
+                max-w-md
+              "
+              onClick={e =>
+                e.stopPropagation()
+              }
+            >
+
+              <h2
+                className="
+                  text-xl
+                  font-bold
+                  mb-4
+                "
+              >
+                Enviar WhatsApp
+              </h2>
+
+              <div
+                className="
+                  mb-4
+                  text-sm
+                "
+              >
+                {
+                  selectedParticipant.nickname
+                }
+              </div>
+
+              <div
+                className="
+                  space-y-3
+                "
+              >
+
+                <label
+                  className="
+                    flex
+                    gap-2
+                  "
+                >
+
+                  <input
+                    type="radio"
+                    checked={
+                      selectedTemplate ===
+                      "reminder_prediction"
+                    }
+                    onChange={() =>
+                      setSelectedTemplate(
+                        "reminder_prediction"
+                      )
+                    }
+                  />
+
+                  Recordatorio de pronósticos
+
+                </label>
+
+                <label
+                  className="
+                    flex
+                    gap-2
+                  "
+                >
+
+                  <input
+                    type="radio"
+                    checked={
+                      selectedTemplate ===
+                      "ranking_update"
+                    }
+                    onChange={() =>
+                      setSelectedTemplate(
+                        "ranking_update"
+                      )
+                    }
+                  />
+
+                  Actualización ranking
+
+                </label>
+
+                <label
+                  className="
+                    flex
+                    gap-2
+                  "
+                >
+
+                  <input
+                    type="radio"
+                    checked={
+                      selectedTemplate ===
+                      "match_result"
+                    }
+                    onChange={() =>
+                      setSelectedTemplate(
+                        "match_result"
+                      )
+                    }
+                  />
+
+                  Resultado partido
+
+                </label>
+
+                <label
+                  className="
+                    flex
+                    gap-2
+                  "
+                >
+
+                  <input
+                    type="radio"
+                    checked={
+                      selectedTemplate ===
+                      "hello_world"
+                    }
+                    onChange={() =>
+                      setSelectedTemplate(
+                        "hello_world"
+                      )
+                    }
+                  />
+
+                  Prueba Meta
+
+                </label>
+
+              </div>
+
+              <div
+                className="
+                  flex
+                  justify-center
+                  mt-6
+                "
+              >
+
+                <button
+                  disabled={
+                    sending
+                  }
+                  onClick={
+                    async () => {
+
+                      try {
+
+                        setSending(
+                          true
+                        );
+
+                        const supabase =
+                          createClient();
+
+                        const { data } =
+                          await supabase.auth.getUser();
+
+                        if (
+                          !data.user
+                        ) {
+                          return;
+                        }
+
+                        const response =
+                          await fetch(
+                            "/api/organization/send-whatsapp",
+                            {
+                              method:
+                                "POST",
+
+                              headers: {
+                                "Content-Type":
+                                  "application/json"
+                              },
+
+                              body:
+                                JSON.stringify({
+
+                                  authUserId:
+                                    data.user.id,
+
+                                  userId:
+                                    selectedParticipant.id,
+
+                                  templateCode:
+                                    selectedTemplate
+
+                                })
+                            }
+                          );
+
+                        if (
+                          !response.ok
+                        ) {
+
+                          const error =
+                            await response.json();
+
+                          alert(
+                            error.error
+                          );
+
+                          return;
+
+                        }
+
+                        alert(
+                          "WhatsApp enviado"
+                        );
+
+                        setSelectedParticipant(
+                          null
+                        );
+
+                      } finally {
+
+                        setSending(
+                          false
+                        );
+
+                      }
+
+                    }
+                  }
+                  className="
+                    px-4
+                    py-2
+                    rounded
+                    bg-green-600
+                    text-white
+                  "
+                >
+
+                  {
+                    sending
+                      ? "Enviando..."
+                      : "Enviar"
+                  }
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )
+      }
     </div>
 
   );
