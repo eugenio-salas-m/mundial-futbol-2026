@@ -264,11 +264,76 @@ export async function POST() {
         })
       );
 
+      const recentResults =
+  results
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        new Date(
+          b.match.startsAtChile
+        ).getTime() -
+        new Date(
+          a.match.startsAtChile
+        ).getTime()
+    )
+    .slice(
+      0,
+      4
+    )
+    .map(
+      (
+        result
+      ) => ({
+
+        id:
+          result.match.id,
+
+        homeTeam: {
+
+          fifaCode:
+            result.match
+              .homeTeam
+              .fifaCode,
+
+          flagUrl:
+            result.match
+              .homeTeam
+              .flagUrl
+
+        },
+
+        awayTeam: {
+
+          fifaCode:
+            result.match
+              .awayTeam
+              .fifaCode,
+
+          flagUrl:
+            result.match
+              .awayTeam
+              .flagUrl
+
+        },
+
+        homeGoals:
+          result.homeGoals,
+
+        awayGoals:
+          result.awayGoals
+
+      })
+    );
+
   return NextResponse.json({
 
     topTeams,
 
-    topScorers
+    topScorers,
+
+    recentResults
 
   });
 

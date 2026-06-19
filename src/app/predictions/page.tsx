@@ -20,6 +20,9 @@ export default function PredictionsPage() {
       {}
     );
 
+  const [savedPredictions, setSavedPredictions] =
+    useState<Record<string, boolean>>({});
+
   const [loading, setLoading] =
     useState(true);
 
@@ -127,25 +130,48 @@ export default function PredictionsPage() {
         return;
       }
 
-      await fetch(
-        "/api/predictions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body: JSON.stringify({
-            authUserId:
-              data.user.id,
-            matchId,
-            homeGoals:
-              current.homeGoals,
-            awayGoals:
-              current.awayGoals
+      const response =
+        await fetch(
+          "/api/predictions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify({
+              authUserId:
+                data.user.id,
+              matchId,
+              homeGoals:
+                current.homeGoals,
+              awayGoals:
+                current.awayGoals
+            })
+          }
+        );
+
+      if (response.ok) {
+
+        setSavedPredictions(
+          prev => ({
+            ...prev,
+            [matchId]: true
           })
-        }
-      );
+        );
+
+        setTimeout(() => {
+
+          setSavedPredictions(
+            prev => ({
+              ...prev,
+              [matchId]: false
+            })
+          );
+
+        }, 5000);
+
+      }
 
     };
 
@@ -320,226 +346,281 @@ export default function PredictionsPage() {
                                       match.id
                                     }
                                     className="
-                                      flex
-                                      items-center
-                                      justify-between
-                                      gap-2
-                                      text-sm
-                                      cursor-pointer
-                                      hover:bg-blue-50
-                                      rounded
-                                      transition-colors
+                                      border-b
+                                      last:border-b-0
+                                      pb-2
                                     "
-                                    onClick={() => {
-
-                                      if (
-                                        match.status !==
-                                        "scheduled"
-                                      ) {
-                                    
-                                        setSelectedMatch(
-                                          match
-                                        );
-                                    
-                                      }
-                                    
-                                    }}
-
                                   >
-
+                                
                                     <div
                                       className="
-                                        w-32
-                                        flex
-                                        items-center
-                                        justify-end
-                                        gap-1
+                                        text-xs
+                                        text-gray-500
+                                        text-center
+                                        mb-1
                                       "
                                     >
-
-                                      <span className="font-bold">
-                                        {
-                                          match.homeTeam.fifaCode
-                                        }
-                                      </span>
-
-                                      <Image
-                                        src={
-                                          match.homeTeam.flagUrl
-                                        }
-                                        alt=""
-                                        width={
-                                          24
-                                        }
-                                        height={
-                                          18
-                                        }
-                                      />
-
+                                
+                                      {
+                                        new Date(
+                                          match.startsAtChile
+                                        ).toLocaleString(
+                                          "es-CL",
+                                          {
+                                            weekday: "short",
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit"
+                                          }
+                                        )
+                                      }
+                                
                                     </div>
-
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      disabled={
-                                        !editable
-                                      }
-                                      value={
-                                        scores[
-                                          match.id
-                                        ]
-                                          ?.homeGoals ??
-                                        ""
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        setScores({
-                                          ...scores,
-                                          [match.id]:
-                                            {
-                                              ...scores[
-                                                match.id
-                                              ],
-                                              homeGoals:
-                                                e
-                                                  .target
-                                                  .value ===
-                                                ""
-                                                  ? null
-                                                  : parseInt(
-                                                      e
-                                                        .target
-                                                        .value
-                                                    )
-                                            }
-                                        })
-                                      }
-                                      onBlur={() =>
-                                        handleBlur(
-                                          match.id
-                                        )
-                                      }
-                                      className={`
-                                        w-14
-                                        text-center
-                                        border
-                                        rounded
-                                        p-1
-                                      
-                                        ${
-                                          !editable &&
-                                          score?.exactScorePoints > 0
-                                            ? "bg-green-200"
-                                            : !editable &&
-                                              score?.points > 0
-                                            ? "bg-yellow-200"
-                                            : !editable
-                                            ? "bg-gray-300 text-gray-500"
-                                            : ""
-                                        }
-                                      `}
-                                    />
-
-                                    <span>
-                                      -
-                                    </span>
-
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      disabled={
-                                        !editable
-                                      }
-                                      value={
-                                        scores[
-                                          match.id
-                                        ]
-                                          ?.awayGoals ??
-                                        ""
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        setScores({
-                                          ...scores,
-                                          [match.id]:
-                                            {
-                                              ...scores[
-                                                match.id
-                                              ],
-                                              awayGoals:
-                                                e
-                                                  .target
-                                                  .value ===
-                                                ""
-                                                  ? null
-                                                  : parseInt(
-                                                      e
-                                                        .target
-                                                        .value
-                                                    )
-                                            }
-                                        })
-                                      }
-                                      onBlur={() =>
-                                        handleBlur(
-                                          match.id
-                                        )
-                                      }
-                                      className={`
-                                        w-14
-                                        text-center
-                                        border
-                                        rounded
-                                        p-1
-                                      
-                                        ${
-                                          !editable &&
-                                          score?.exactScorePoints > 0
-                                            ? "bg-green-200"
-                                            : !editable &&
-                                              score?.points > 0
-                                            ? "bg-yellow-200"
-                                            : !editable
-                                            ? "bg-gray-300 text-gray-500"
-                                            : ""
-                                        }
-                                      `}
-                                    />
-
+                                
                                     <div
                                       className="
-                                        w-32
                                         flex
                                         items-center
-                                        gap-1
+                                        justify-between
+                                        gap-2
+                                        text-sm
+                                        cursor-pointer
+                                        hover:bg-blue-50
+                                        rounded
+                                        transition-colors
                                       "
+                                      onClick={() => {
+                                
+                                        if (
+                                          match.status !==
+                                          "scheduled"
+                                        ) {
+                                
+                                          setSelectedMatch(
+                                            match
+                                          );
+                                
+                                        }
+                                
+                                      }}
                                     >
 
-                                      <Image
-                                        src={
-                                          match.awayTeam.flagUrl
+                                      <div
+                                        className="
+                                          w-32
+                                          flex
+                                          items-center
+                                          justify-end
+                                          gap-1
+                                        "
+                                      >
+
+                                        <span className="font-bold">
+                                          {
+                                            match.homeTeam.fifaCode
+                                          }
+                                        </span>
+
+                                        <Image
+                                          src={
+                                            match.homeTeam.flagUrl
+                                          }
+                                          alt=""
+                                          width={
+                                            24
+                                          }
+                                          height={
+                                            18
+                                          }
+                                        />
+
+                                      </div>
+
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        disabled={
+                                          !editable
                                         }
-                                        alt=""
-                                        width={
-                                          24
+                                        value={
+                                          scores[
+                                            match.id
+                                          ]
+                                            ?.homeGoals ??
+                                          ""
                                         }
-                                        height={
-                                          18
+                                        onChange={(
+                                          e
+                                        ) =>
+                                          setScores({
+                                            ...scores,
+                                            [match.id]:
+                                              {
+                                                ...scores[
+                                                  match.id
+                                                ],
+                                                homeGoals:
+                                                  e
+                                                    .target
+                                                    .value ===
+                                                  ""
+                                                    ? null
+                                                    : parseInt(
+                                                        e
+                                                          .target
+                                                          .value
+                                                      )
+                                              }
+                                          })
                                         }
+                                        onBlur={() =>
+                                          handleBlur(
+                                            match.id
+                                          )
+                                        }
+                                        className={`
+                                          w-14
+                                          text-center
+                                          border
+                                          rounded
+                                          p-1
+                                        
+                                          ${
+                                            !editable &&
+                                            score?.exactScorePoints > 0
+                                              ? "bg-green-200"
+                                              : !editable &&
+                                                score?.points > 0
+                                              ? "bg-yellow-200"
+                                              : !editable
+                                              ? "bg-gray-300 text-gray-500"
+                                              : ""
+                                          }
+                                        `}
                                       />
 
-                                      <span className="font-bold">
-                                        {
-                                          match.awayTeam.fifaCode
-                                        }
+                                      <span>
+                                        -
                                       </span>
 
-                                    </div>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        disabled={
+                                          !editable
+                                        }
+                                        value={
+                                          scores[
+                                            match.id
+                                          ]
+                                            ?.awayGoals ??
+                                          ""
+                                        }
+                                        onChange={(
+                                          e
+                                        ) =>
+                                          setScores({
+                                            ...scores,
+                                            [match.id]:
+                                              {
+                                                ...scores[
+                                                  match.id
+                                                ],
+                                                awayGoals:
+                                                  e
+                                                    .target
+                                                    .value ===
+                                                  ""
+                                                    ? null
+                                                    : parseInt(
+                                                        e
+                                                          .target
+                                                          .value
+                                                      )
+                                              }
+                                          })
+                                        }
+                                        onBlur={() =>
+                                          handleBlur(
+                                            match.id
+                                          )
+                                        }
+                                        className={`
+                                          w-14
+                                          text-center
+                                          border
+                                          rounded
+                                          p-1
+                                        
+                                          ${
+                                            !editable &&
+                                            score?.exactScorePoints > 0
+                                              ? "bg-green-200"
+                                              : !editable &&
+                                                score?.points > 0
+                                              ? "bg-yellow-200"
+                                              : !editable
+                                              ? "bg-gray-300 text-gray-500"
+                                              : ""
+                                          }
+                                        `}
+                                      />
 
+                                      <div
+                                        className="
+                                          w-32
+                                          flex
+                                          items-center
+                                          gap-1
+                                        "
+                                      >
+
+                                        <Image
+                                          src={
+                                            match.awayTeam.flagUrl
+                                          }
+                                          alt=""
+                                          width={
+                                            24
+                                          }
+                                          height={
+                                            18
+                                          }
+                                        />
+
+                                        <span className="font-bold">
+                                          {
+                                            match.awayTeam.fifaCode
+                                          }
+                                        </span>
+                                        
+                                        <div
+                                          className="
+                                            w-5
+                                            text-center
+                                          "
+                                        >
+                                          {savedPredictions[
+                                            match.id
+                                          ] && (
+
+                                            <span
+                                              className="
+                                                text-green-600
+                                                font-bold
+                                                text-lg
+                                              "
+                                            >
+                                              ✓
+                                            </span>
+
+                                          )}
+                                        </div>
+                                      </div>
+
+                                    </div>
                                   </div>
-
                                 );
 
                               }

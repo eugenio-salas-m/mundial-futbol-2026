@@ -34,9 +34,13 @@ export default function AuthenticatedHome() {
       setSelectedMatch] =
       useState<any>(null);
 
-      const [standings,
-        setStandings] =
-        useState<any>(null);
+    const [standings,
+      setStandings] =
+      useState<any>(null);
+
+    const [savedPredictions,
+      setSavedPredictions] =
+      useState<Record<string, boolean>>({});
 
   useEffect(() => {
 
@@ -327,7 +331,23 @@ export default function AuthenticatedHome() {
       if (
         response.ok
       ) {
-  
+        setSavedPredictions(
+          prev => ({
+            ...prev,
+            [matchId]: true
+          })
+        );
+      
+        setTimeout(() => {
+      
+          setSavedPredictions(
+            prev => ({
+              ...prev,
+              [matchId]: false
+            })
+          );
+      
+        }, 5000);
   
       }
   
@@ -488,7 +508,7 @@ export default function AuthenticatedHome() {
               mb-4
             "
           >
-            Partidos de Hoy
+            Mis Apuestas de Hoy
           </h3>
 
           <div
@@ -514,227 +534,272 @@ export default function AuthenticatedHome() {
       <div
         key={match.id}
         className="
-          flex
-          items-center
-          justify-between
-          gap-2
-          text-sm
           border-b
           pb-2
-          cursor-pointer
-          hover:bg-blue-50
-          rounded
-          transition-colors
         "
-        onClick={() => {
-
-          if (
-            match.status !==
-            "scheduled"
-          ) {
-
-            setSelectedMatch(
-              match
-            );
-
-          }
-
-        }}
       >
 
         <div
           className="
-            flex
-            items-center
-            gap-1
-            w-24
-            justify-end
+            text-xs
+            text-gray-500
+            mb-1
+            text-center
           "
         >
-
-          <span
-            className="
-              font-bold
-            "
-          >
-            {
-              match.homeTeam
-                .fifaCode
-            }
-          </span>
-
-          <img
-            src={
-              match.homeTeam
-                .flagUrl
-            }
-            alt=""
-            className="
-              w-6
-              h-4
-            "
-          />
-
+          {
+            new Date(
+              match.startsAtChile
+            ).toLocaleString(
+              "es-CL",
+              {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+              }
+            )
+          }
         </div>
-
-        <input
-          type="number"
-          min="0"
-          disabled={!editable}
-          value={
-            todayPredictions[
-              match.id
-            ]?.homeGoals ?? ""
-          }
-          onChange={e =>
-            setTodayPredictions(
-              {
-                ...todayPredictions,
-
-                [match.id]: {
-
-                  ...todayPredictions[
-                    match.id
-                  ],
-
-                  homeGoals:
-                    e.target.value
-
-                }
-
-              }
-            )
-          }
-          onBlur={() =>
-            handleTodayBlur(
-              match.id
-            )
-          }
-          className={`
-            w-12
-            text-center
-            border
-            rounded
-            p-1
-
-            ${
-              !editable &&
-              score?.exactScorePoints > 0
-
-                ? "bg-green-200"
-
-                : !editable &&
-                  score?.points > 0
-
-                ? "bg-yellow-200"
-
-                : !editable
-
-                ? "bg-gray-300 text-gray-500"
-
-                : ""
-            }
-          `}
-        />
-
-        <span>-</span>
-
-        <input
-          type="number"
-          min="0"
-          disabled={!editable}
-          value={
-            todayPredictions[
-              match.id
-            ]?.awayGoals ?? ""
-          }
-          onChange={e =>
-            setTodayPredictions(
-              {
-                ...todayPredictions,
-
-                [match.id]: {
-
-                  ...todayPredictions[
-                    match.id
-                  ],
-
-                  awayGoals:
-                    e.target.value
-
-                }
-
-              }
-            )
-          }
-          onBlur={() =>
-            handleTodayBlur(
-              match.id
-            )
-          }
-          className={`
-            w-12
-            text-center
-            border
-            rounded
-            p-1
-
-            ${
-              !editable &&
-              score?.exactScorePoints > 0
-
-                ? "bg-green-200"
-
-                : !editable &&
-                  score?.points > 0
-
-                ? "bg-yellow-200"
-
-                : !editable
-
-                ? "bg-gray-300 text-gray-500"
-
-                : ""
-            }
-          `}
-        />
-
         <div
           className="
             flex
             items-center
-            gap-1
-            w-24
+            justify-between
+            gap-2
+            text-sm
+            border-b
+            pb-2
+            cursor-pointer
+            hover:bg-blue-50
+            rounded
+            transition-colors
           "
-        >
+          onClick={() => {
 
-          <img
-            src={
-              match.awayTeam
-                .flagUrl
+            if (
+              match.status !==
+              "scheduled"
+            ) {
+
+              setSelectedMatch(
+                match
+              );
+
             }
-            alt=""
-            className="
-              w-6
-              h-4
-            "
-          />
 
-          <span
+          }}
+        >
+        
+          <div
             className="
-              font-bold
+              flex
+              items-center
+              gap-1
+              w-24
+              justify-end
             "
           >
-            {
-              match.awayTeam
-                .fifaCode
+
+            <span
+              className="
+                font-bold
+              "
+            >
+              {
+                match.homeTeam
+                  .fifaCode
+              }
+            </span>
+
+            <img
+              src={
+                match.homeTeam
+                  .flagUrl
+              }
+              alt=""
+              className="
+                w-6
+                h-4
+              "
+            />
+
+          </div>
+
+          <input
+            type="number"
+            min="0"
+            disabled={!editable}
+            value={
+              todayPredictions[
+                match.id
+              ]?.homeGoals ?? ""
             }
-          </span>
+            onChange={e =>
+              setTodayPredictions(
+                {
+                  ...todayPredictions,
+
+                  [match.id]: {
+
+                    ...todayPredictions[
+                      match.id
+                    ],
+
+                    homeGoals:
+                      e.target.value
+
+                  }
+
+                }
+              )
+            }
+            onBlur={() =>
+              handleTodayBlur(
+                match.id
+              )
+            }
+            className={`
+              w-12
+              text-center
+              border
+              rounded
+              p-1
+
+              ${
+                !editable &&
+                score?.exactScorePoints > 0
+
+                  ? "bg-green-200"
+
+                  : !editable &&
+                    score?.points > 0
+
+                  ? "bg-yellow-200"
+
+                  : !editable
+
+                  ? "bg-gray-300 text-gray-500"
+
+                  : ""
+              }
+            `}
+          />
+
+          <span>-</span>
+
+          <input
+            type="number"
+            min="0"
+            disabled={!editable}
+            value={
+              todayPredictions[
+                match.id
+              ]?.awayGoals ?? ""
+            }
+            onChange={e =>
+              setTodayPredictions(
+                {
+                  ...todayPredictions,
+
+                  [match.id]: {
+
+                    ...todayPredictions[
+                      match.id
+                    ],
+
+                    awayGoals:
+                      e.target.value
+
+                  }
+
+                }
+              )
+            }
+            onBlur={() =>
+              handleTodayBlur(
+                match.id
+              )
+            }
+            className={`
+              w-12
+              text-center
+              border
+              rounded
+              p-1
+
+              ${
+                !editable &&
+                score?.exactScorePoints > 0
+
+                  ? "bg-green-200"
+
+                  : !editable &&
+                    score?.points > 0
+
+                  ? "bg-yellow-200"
+
+                  : !editable
+
+                  ? "bg-gray-300 text-gray-500"
+
+                  : ""
+              }
+            `}
+          />
+
+          <div
+            className="
+              flex
+              items-center
+              gap-1
+              w-24
+            "
+          >
+
+            <img
+              src={
+                match.awayTeam
+                  .flagUrl
+              }
+              alt=""
+              className="
+                w-6
+                h-4
+              "
+            />
+
+            <span
+              className="
+                font-bold
+              "
+            >
+              {
+                match.awayTeam
+                  .fifaCode
+              }
+            </span>
+
+            {savedPredictions[
+                match.id
+              ] && (
+
+                <span
+                  className="
+                    text-green-600
+                    font-bold
+                    text-lg
+                  "
+                >
+                  ✓
+                </span>
+
+              )}
+          </div>
 
         </div>
 
       </div>
-
     );
 
   }
@@ -902,6 +967,116 @@ export default function AuthenticatedHome() {
 
         </div>
 
+        <h3
+          className="
+            text-xl
+            font-bold
+            mt-6
+            mb-3
+          "
+        >
+          📋 Últimos Resultados
+        </h3>
+
+        <div
+          className="
+            space-y-2
+          "
+        >
+
+          {standings.recentResults?.map(
+            (
+              match: any
+            ) => (
+
+              <div
+                key={match.id}
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  text-sm
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-1
+                  "
+                >
+
+                  <img
+                    src={
+                      match.homeTeam
+                        .flagUrl
+                    }
+                    alt=""
+                    className="
+                      w-5
+                      h-3
+                    "
+                  />
+
+                  <strong>
+                    {
+                      match.homeTeam
+                        .fifaCode
+                    }
+                  </strong>
+
+                </div>
+
+                <div
+                  className="
+                    font-bold
+                  "
+                >
+                  {
+                    match.homeGoals
+                  }
+                  {" - "}
+                  {
+                    match.awayGoals
+                  }
+                </div>
+
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-1
+                  "
+                >
+
+                  <img
+                    src={
+                      match.awayTeam
+                        .flagUrl
+                    }
+                    alt=""
+                    className="
+                      w-5
+                      h-3
+                    "
+                  />
+
+                  <strong>
+                    {
+                      match.awayTeam
+                        .fifaCode
+                    }
+                  </strong>
+
+                </div>
+
+              </div>
+
+            )
+          )}
+
+        </div>
         <a
           href="/standings"
           className="
