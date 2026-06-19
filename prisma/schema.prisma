@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -125,6 +126,7 @@ model Invitation {
   organizationId  String         @map("organization_id") @db.Uuid
   createdByUserId String         @map("created_by_user_id") @db.Uuid
   tokenHash       String         @unique @map("token_hash")
+  inviteUrl       String?        @map("invite_url")
   type            InvitationType
   email           String?        @db.VarChar(200)
   maxUses         Int?           @map("max_uses")
