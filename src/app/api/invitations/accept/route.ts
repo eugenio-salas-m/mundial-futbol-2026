@@ -19,6 +19,21 @@ export async function POST(
         .update(token)
         .digest("hex");
 
+        console.log(
+          "TOKEN:",
+          token
+        );
+        
+        console.log(
+          "AUTH USER:",
+          authUserId
+        );
+        
+        console.log(
+          "HASH:",
+          tokenHash
+        );
+        
     const invitation =
       await prisma.invitation.findFirst({
         where: {
@@ -76,12 +91,31 @@ export async function POST(
 
     }
 
-    const user =
+    let user =
       await prisma.user.findFirst({
         where: {
           authUserId
         }
       });
+
+    if (!user) {
+
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            500
+          )
+      );
+
+      user =
+        await prisma.user.findFirst({
+          where: {
+            authUserId
+          }
+        });
+
+    }
 
     if (!user) {
 

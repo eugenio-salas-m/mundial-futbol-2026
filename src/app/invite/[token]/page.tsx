@@ -46,9 +46,8 @@ const [loginRequired, setLoginRequired] =
           
           }
 
-        const response =
           await fetch(
-            "/api/invitations/accept",
+            "/api/auth/sync-user",
             {
               method: "POST",
               headers: {
@@ -56,12 +55,42 @@ const [loginRequired, setLoginRequired] =
                   "application/json"
               },
               body: JSON.stringify({
-                token,
                 authUserId:
-                  data.user.id
+                  data.user.id,
+          
+                email:
+                  data.user.email,
+          
+                nickname:
+                  data.user.user_metadata
+                    ?.full_name ??
+                  data.user.user_metadata
+                    ?.name ??
+                  data.user.email,
+          
+                avatarUrl:
+                  data.user.user_metadata
+                    ?.avatar_url
               })
             }
           );
+          
+          const response =
+            await fetch(
+              "/api/invitations/accept",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
+                body: JSON.stringify({
+                  token,
+                  authUserId:
+                    data.user.id
+                })
+              }
+            );
 
         const result =
           await response.json();
