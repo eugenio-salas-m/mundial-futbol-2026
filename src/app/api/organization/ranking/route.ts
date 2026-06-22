@@ -114,6 +114,13 @@ export async function POST(
           currentUser.id
       );
 
+    const lastPoints =
+      ranking.length > 0
+        ? ranking[
+            ranking.length - 1
+          ].totalPoints
+        : 0;
+
     return NextResponse.json({
 
       myPosition:
@@ -126,6 +133,8 @@ export async function POST(
       myPoints:
         myRanking
           ?.totalPoints ?? 0,
+
+      lastPoints,
 
       ranking
 

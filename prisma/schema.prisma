@@ -78,6 +78,7 @@ model Organization {
   invitations        Invitation[]
   activityFeedEvents ActivityFeedEvent[]
   notificationLogs   NotificationLog[]
+  rankingSnapshots RankingSnapshot[]
 
   @@map("organizations")
 }
@@ -126,7 +127,8 @@ model User {
   notificationLogs   NotificationLog[]
   feedEvents         ActivityFeedEvent[]
   registeredResults  MatchResult[]
-
+  rankingSnapshots RankingSnapshot[]
+  
   @@index([organizationId])
   @@index([role])
   @@map("users")
@@ -351,4 +353,22 @@ model NotificationLog {
   @@index([status])
   @@index([createdAt])
   @@map("notification_logs")
+}
+
+model RankingSnapshot {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  totalPoints      Int      @map("total_points")
+  organizationRank Int      @map("organization_rank")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([createdAt])
+
+  @@map("ranking_snapshots")
 }

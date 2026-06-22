@@ -102,9 +102,14 @@ export async function POST(
 
     });
 
-  const todayMatches =
+    const todayMatches =
     matches.filter(
       match => {
+  
+        const matchTime =
+          new Date(
+            match.startsAtChile
+          );
   
         const matchDate =
           new Intl.DateTimeFormat(
@@ -117,14 +122,58 @@ export async function POST(
               day: "2-digit"
             }
           ).format(
-            new Date(
-              match.startsAtChile
+            matchTime
+          );
+  
+        if (
+          matchDate ===
+          chileToday
+        ) {
+  
+          return true;
+  
+        }
+  
+        const hourChile =
+          Number(
+            new Intl.DateTimeFormat(
+              "en-US",
+              {
+                timeZone:
+                  "America/Santiago",
+                hour: "2-digit",
+                hour12: false
+              }
+            ).format(
+              matchTime
             )
+          );
+  
+        const tomorrow =
+          new Date();
+  
+        tomorrow.setDate(
+          tomorrow.getDate() + 1
+        );
+  
+        const chileTomorrow =
+          new Intl.DateTimeFormat(
+            "en-CA",
+            {
+              timeZone:
+                "America/Santiago",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit"
+            }
+          ).format(
+            tomorrow
           );
   
         return (
           matchDate ===
-          chileToday
+            chileTomorrow &&
+          hourChile < 12
         );
   
       }

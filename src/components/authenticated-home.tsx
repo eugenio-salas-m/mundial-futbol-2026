@@ -34,6 +34,24 @@ export default function AuthenticatedHome() {
       setSelectedMatch] =
       useState<any>(null);
 
+    const [showAdvice,
+      setShowAdvice] =
+      useState(false);
+
+    const [adviceLoading,
+      setAdviceLoading] =
+      useState(false);
+    
+    const [adviceText,
+      setAdviceText] =
+      useState("");
+
+    const [loadingMessage,
+      setLoadingMessage] =
+      useState(
+        ""
+      );
+
     const [standings,
       setStandings] =
       useState<any>(null);
@@ -382,6 +400,151 @@ export default function AuthenticatedHome() {
 
       };
       
+      const isLastOrTied =
+        ranking &&
+        ranking.participantCount > 1 &&
+        ranking.myPoints === ranking.lastPoints;
+
+      const sadEmoji =
+        ["😭", "😡", "🤬", "💀", "😵"][
+          Math.floor(
+            Math.random() * 5
+          )
+        ];
+
+      const rankingCardClass =
+        ranking?.myPosition === 1
+          ? "bg-green-600 text-white"
+          : ranking?.myPosition === 2
+          ? "bg-green-400 text-white"
+          : ranking?.myPosition === 3
+          ? "bg-green-200"
+          : isLastOrTied
+          ? "bg-red-100"
+          : "bg-white";
+
+
+        const loadAdvice =
+          async (
+            matchId: string
+          ) => {
+        
+            const messages = [
+              "⚽ Revisando antecedentes del partido...",
+              "✍️ Redactando consejo..."
+            ];
+
+            console.log(
+              "loading start"
+            );
+
+            setLoadingMessage(
+              "🧠 Consultando al analista IA..."
+            );
+
+            setShowAdvice(
+              true
+            );
+
+
+            let timer:
+              ReturnType<
+                typeof setInterval
+              > | null = null;
+
+            try {
+        
+              setAdviceLoading(
+                true
+              );
+        
+              setAdviceText(
+                ""
+              );
+        
+              const supabase =
+                createClient();
+        
+              const { data } =
+                await supabase.auth.getUser();
+        
+              if (!data.user) {
+                return;
+              }
+        
+              
+              
+              let index = 0;
+              
+              timer =
+                setInterval(() => {
+                  setLoadingMessage(
+                    messages[
+                      index %
+                      messages.length
+                    ]
+                  );
+                  index++;
+                }, 800);
+
+
+              const response =
+                await fetch(
+                  "/api/matches/advice",
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type":
+                        "application/json"
+                    },
+                    body: JSON.stringify({
+                      matchId,
+                      authUserId:
+                        data.user.id
+                    })
+                  }
+                );
+        
+              const result =
+                await response.json();
+        
+              if (!response.ok) {
+        
+                setAdviceText(
+                  result.error ??
+                  "No fue posible obtener consejo."
+                );
+        
+                return;
+        
+              }
+        
+              setAdviceText(
+                result.advice
+              );
+        
+              setShowAdvice(
+                true
+              );
+        
+            } finally {
+              console.log(
+                "loading end"
+              );
+              if (timer) {
+                clearInterval(
+                  timer
+                );
+              }
+              
+              setAdviceLoading(
+                false
+              );
+        
+            }
+        
+          };
+
   return (
 
     <div className="flex flex-col gap-4 items-center">
@@ -424,14 +587,15 @@ export default function AuthenticatedHome() {
         ranking && (
 
         <div
-          className="
+          className={`
             border
             rounded-lg
             p-4
-            bg-yellow-50
             text-center
             min-w-[280px]
-          "
+            shadow-sm
+            ${rankingCardClass}
+          `}
         >
 
           <div className="text-5xl">
@@ -468,7 +632,7 @@ export default function AuthenticatedHome() {
             } pts
           </div>
 
-          {isLast && (
+          {isLastOrTied && (
 
             <div
               className="
@@ -477,10 +641,10 @@ export default function AuthenticatedHome() {
                 mt-2
               "
             >
-              👇
+              {sadEmoji}
             </div>
 
-          )}
+            )}
 
           <a
             href="/organization/ranking"
@@ -519,7 +683,7 @@ export default function AuthenticatedHome() {
               mb-4
             "
           >
-            Mis Apuestas de Hoy
+            Próximos Partidos
           </h3>
 
           <div
@@ -593,17 +757,14 @@ export default function AuthenticatedHome() {
           "
           onClick={() => {
 
-            if (
-              match.status !==
-              "scheduled"
-            ) {
-
-              setSelectedMatch(
-                match
-              );
-
-            }
-
+            setShowAdvice(
+              false
+            );
+          
+            setSelectedMatch(
+              match
+            );
+          
           }}
         >
         
@@ -675,6 +836,9 @@ export default function AuthenticatedHome() {
                 match.id
               )
             }
+            onClick={(e) =>
+              e.stopPropagation()
+            }
             className={`
               w-12
               text-center
@@ -736,6 +900,9 @@ export default function AuthenticatedHome() {
               handleTodayBlur(
                 match.id
               )
+            }
+            onClick={(e) =>
+              e.stopPropagation()
             }
             className={`
               w-12
@@ -1262,11 +1429,17 @@ export default function AuthenticatedHome() {
               justify-center
               z-50
             "
-            onClick={() =>
+            onClick={() => {
+
+              setShowAdvice(
+                false
+              );
+            
               setSelectedMatch(
                 null
-              )
-            }
+              );
+            
+            }}
           >
 
             <div
@@ -1282,45 +1455,420 @@ export default function AuthenticatedHome() {
               }
             >
 
-              <h2
+            <h2
                 className="
                   text-xl
                   font-bold
                   mb-4
                 "
               >
-                Resultado
+                {
+                  selectedMatch.status ===
+                  "scheduled"
+
+                    ? "Información del Partido"
+
+                    : "Resultado Oficial"
+                }
               </h2>
 
+              {selectedMatch.status ===
+              "scheduled" ? (
+
+                <div
+                  className="
+                    space-y-4
+                  "
+                >
+
+                  <div
+                    className="
+                      flex
+                      justify-between
+                      items-center
+                    "
+                  >
+
+                    <div
+                      className="
+                        text-center
+                      "
+                    >
+
+                      <img
+                        src={
+                          selectedMatch
+                            .homeTeam
+                            .flagUrl
+                        }
+                        alt=""
+                        className="
+                          w-12
+                          h-8
+                          mx-auto
+                        "
+                      />
+
+                      <div
+                        className="
+                          font-bold
+                        "
+                      >
+                        {
+                          selectedMatch
+                            .homeTeam
+                            .fifaCode
+                        }
+                      </div>
+
+                      <div
+                        className="
+                          text-sm
+                        "
+                      >
+                        {
+                          selectedMatch
+                            .homeTeam
+                            .name
+                        }
+                      </div>
+
+                    </div>
+
+                    <div
+                      className="
+                        text-center
+                        font-bold
+                        text-xl
+                      "
+                    >
+                      VS
+                      <div className="text-center text-xs text-gray-500">
+                        {
+                          new Date(
+                            selectedMatch.startsAtChile
+                          ).toLocaleString(
+                            "es-CL"
+                          )
+                        }
+                      </div>
+                    </div>
+
+                    <div
+                      className="
+                        text-center
+                      "
+                    >
+
+                      <img
+                        src={
+                          selectedMatch
+                            .awayTeam
+                            .flagUrl
+                        }
+                        alt=""
+                        className="
+                          w-12
+                          h-8
+                          mx-auto
+                        "
+                      />
+
+                      <div
+                        className="
+                          font-bold
+                        "
+                      >
+                        {
+                          selectedMatch
+                            .awayTeam
+                            .fifaCode
+                        }
+                      </div>
+
+                      <div
+                        className="
+                          text-sm
+                        "
+                      >
+                        {
+                          selectedMatch
+                            .awayTeam
+                            .name
+                        }
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  {!showAdvice ? (
+
+                    <div
+                      className="
+                        text-center
+                        pt-4
+                      "
+                    >
+
+                      <p
+                        className="
+                          mb-4
+                        "
+                      >
+                        ¿Quieres un consejo
+                        para este partido?
+                      </p>
+
+                      <div
+                        className="
+                          flex
+                          justify-center
+                          gap-2
+                        "
+                      >
+
+                        <button
+                          onClick={() =>
+                            loadAdvice(
+                              selectedMatch.id
+                            )
+                          }
+                          className="
+                            px-4
+                            py-2
+                            bg-green-600
+                            text-white
+                            rounded
+                          "
+                        >
+                          Sí
+                        </button>
+
+                        <button
+                          onClick={() => {
+
+                            setShowAdvice(
+                              false
+                            );
+                          
+                            setSelectedMatch(
+                              null
+                            );
+                          
+                          }}
+                          className="
+                            px-4
+                            py-2
+                            bg-gray-300
+                            rounded
+                          "
+                        >
+                          No
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  ) : (
+
+                    <div
+                      className="
+                        mt-4
+                        p-3
+                        bg-blue-50
+                        rounded
+                        text-sm
+                      "
+                    >
+
+                        {adviceLoading ? (
+
+                          <div
+                            className="
+                              flex
+                              flex-col
+                              items-center
+                              gap-3
+                              py-4
+                            "
+                          >
+
+                            <div
+                              className="
+                                animate-spin
+                                rounded-full
+                                h-10
+                                w-10
+                                border-4
+                                border-blue-200
+                                border-t-blue-600
+                              "
+                            />
+
+                            <div
+                              className="
+                                text-sm
+                                text-gray-600
+                                text-center
+                              "
+                            >
+                              {loadingMessage}
+                            </div>
+
+                          </div>
+
+                        ) : (
+
+                          adviceText
+
+                        )}
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              ) : (
+              <>
               <div className="space-y-2">
 
-                <div>
+                <div
+                  className="
+                    flex
+                    justify-between
+                    items-center
+                  "
+                >
 
-                  Resultado oficial:
+                  <div
+                    className="
+                      text-center
+                    "
+                  >
 
-                  <strong>
+                    <img
+                      src={
+                        selectedMatch
+                          .homeTeam
+                          .flagUrl
+                      }
+                      alt=""
+                      className="
+                        w-12
+                        h-8
+                        mx-auto
+                      "
+                    />
 
-                    {" "}
-                    {
-                      selectedMatch
-                        .result
-                        ?.homeGoals
-                    }
-                    {" - "}
-                    {
-                      selectedMatch
-                        .result
-                        ?.awayGoals
-                    }
+                    <div
+                      className="
+                        font-bold
+                      "
+                    >
+                      {
+                        selectedMatch
+                          .homeTeam
+                          .fifaCode
+                      }
+                    </div>
 
-                  </strong>
+                    <div
+                      className="
+                        text-sm
+                      "
+                    >
+                      {
+                        selectedMatch
+                          .homeTeam
+                          .name
+                      }
+                    </div>
+
+                  </div>
+
+                  <div
+                    className="
+                      text-center
+                      font-bold
+                      text-xl
+                    "
+                  >
+                    <strong>
+                      {" "}
+                      {
+                        selectedMatch
+                          .result
+                          ?.homeGoals
+                      }
+                      {" - "}
+                      {
+                        selectedMatch
+                          .result
+                          ?.awayGoals
+                      }
+
+                      </strong>
+                  </div>
+
+                  <div
+                    className="
+                      text-center
+                    "
+                  >
+
+                    <img
+                      src={
+                        selectedMatch
+                          .awayTeam
+                          .flagUrl
+                      }
+                      alt=""
+                      className="
+                        w-12
+                        h-8
+                        mx-auto
+                      "
+                    />
+
+                    <div
+                      className="
+                        font-bold
+                      "
+                    >
+                      {
+                        selectedMatch
+                          .awayTeam
+                          .fifaCode
+                      }
+                    </div>
+
+                    <div
+                      className="
+                        text-sm
+                      "
+                    >
+                      {
+                        selectedMatch
+                          .awayTeam
+                          .name
+                      }
+                    </div>
+
+                  </div>
 
                 </div>
 
-                <div>
+                <div className="mt-6">
 
-                  Tu pronóstico:
-
+                <h2 className="
+                  text-xl
+                  font-bold
+                  mb-1
+                ">Tu pronóstico:</h2>
+  
                   <strong>
 
                     {" "}
@@ -1340,9 +1888,13 @@ export default function AuthenticatedHome() {
 
                 </div>
 
-                <div>
+                <div className="mt-6">
 
-                  Puntaje obtenido:
+                  <h2 className="
+                  text-xl
+                  font-bold
+                  mb-1
+                ">Puntaje obtenido:</h2>
 
                   <strong>
 
@@ -1357,9 +1909,13 @@ export default function AuthenticatedHome() {
 
                 </div>
 
-                <div>
+                <div className="mt-6">
 
-                  Puntaje máximo:
+                <h2 className="
+                  text-xl
+                  font-bold
+                  mb-1
+                ">Puntaje máximo:</h2>
 
                   <strong>
 
@@ -1393,7 +1949,8 @@ export default function AuthenticatedHome() {
                 </div>
 
               </div>
-
+              </>
+              )}
             </div>
 
           </div>
