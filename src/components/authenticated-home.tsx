@@ -962,7 +962,15 @@ export default function AuthenticatedHome() {
                   .fifaCode
               }
             </span>
-
+            <span
+              className="
+                ml-1
+                animate-pulse
+              "
+              title="Consejo IA disponible"
+            >
+              💡
+            </span>
             {savedPredictions[
                 match.id
               ] && (

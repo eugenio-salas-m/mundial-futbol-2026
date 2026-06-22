@@ -2,6 +2,22 @@ import { prisma } from "@/lib/prisma";
 import { generateMatchAdvice } from "@/lib/openai";
 import { NextResponse } from "next/server";
 
+function formatHistory(
+    matches: any[]
+  ) {
+  
+    return matches
+      .filter(
+        match => match.result
+      )
+      .map(
+        match =>
+          `${match.homeTeam.fifaCode} ${match.result.homeGoals}-${match.result.awayGoals} ${match.awayTeam.fifaCode}`
+      )
+      .join("\n");
+  
+  }
+
 export async function POST(
   request: Request
 ) {
@@ -41,35 +57,116 @@ export async function POST(
 
     }
 
+    const homeHistory =
+        await prisma.match.findMany({
+    
+        where: {
+    
+            status: "finished",
+    
+            OR: [
+    
+            {
+                homeTeamId:
+                match.homeTeamId
+            },
+    
+            {
+                awayTeamId:
+                match.homeTeamId
+            }
+    
+            ]
+    
+        },
+    
+        include: {
+    
+            homeTeam: true,
+            awayTeam: true,
+            result: true
+    
+        },
+    
+        orderBy: {
+            startsAtChile: "desc"
+        },
+    
+        take: 3
+  
+    });
+  
+    const awayHistory =
+        await prisma.match.findMany({
+    
+        where: {
+    
+            status: "finished",
+    
+            OR: [
+    
+            {
+                homeTeamId:
+                match.awayTeamId
+            },
+    
+            {
+                awayTeamId:
+                match.awayTeamId
+            }
+    
+            ]
+    
+        },
+    
+        include: {
+    
+            homeTeam: true,
+            awayTeam: true,
+            result: true
+    
+        },
+    
+        orderBy: {
+            startsAtChile: "desc"
+        },
+    
+        take: 3
+    
+    });
+
+
     const prompt = `
-Eres un periodista deportivo que escribe para jugadores de una liga privada de pronósticos del Mundial.
+        Analiza este partido del Mundial de futbol 2026 utilizando únicamente los datos proporcionados.
 
-Equipo local:
-${match.homeTeam.name}
-(${match.homeTeam.fifaCode})
+        Partido:
 
-Equipo visitante:
-${match.awayTeam.name}
-(${match.awayTeam.fifaCode})
+        ${match.homeTeam.name} (${match.homeTeam.fifaCode})
 
-Etapa:
-${match.stage}
+        vs
 
-Grupo:
-${match.groupCode ?? "N/A"}
+        ${match.awayTeam.name} (${match.awayTeam.fifaCode})
 
-Entrega:
+        Grupo:
+        ${match.groupCode ?? "N/A"}
 
-- fortalezas de ambos equipos
-- factores importantes
-- posible dinámica del partido
-- muestra los resultados exactos de los partidos jugados por cada equipo en esta versión del campeonato mundial 2026, no hagas mención a campeonatos mundiales anteriores
+        Últimos resultados del local:
 
-Debes ser entretenido, breve y útil.
-Nunca entregues marcadores exactos.
-Nunca digas quién ganará con certeza.
-Máximo 60 palabras.
-`;
+        ${formatHistory(homeHistory)}
+
+        Últimos resultados del visitante:
+
+        ${formatHistory(awayHistory)}
+       
+        Genera un comentario breve indicando:
+
+        1. Momento reciente de cada selección.
+        2. Aspectos que podrían influir.
+        3. Qué tipo de partido podría esperarse.
+
+
+        Máximo 60 palabras.
+        `;
 
     const advice =
       await generateMatchAdvice(
