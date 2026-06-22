@@ -484,6 +484,16 @@ export default function PredictionsPage() {
                                             match.id
                                           )
                                         }
+                                        onKeyDown={async (e) => {
+                                          if (e.key === "Enter") {
+                                            await handleBlur(
+                                              match.id
+                                            );
+                                            (
+                                              e.target as HTMLInputElement
+                                            ).blur();
+                                          }
+                                        }}
                                         className={`
                                           w-14
                                           text-center
@@ -551,6 +561,16 @@ export default function PredictionsPage() {
                                             match.id
                                           )
                                         }
+                                        onKeyDown={async (e) => {
+                                          if (e.key === "Enter") {
+                                            await handleBlur(
+                                              match.id
+                                            );
+                                            (
+                                              e.target as HTMLInputElement
+                                            ).blur();
+                                          }
+                                        }}
                                         className={`
                                           w-14
                                           text-center

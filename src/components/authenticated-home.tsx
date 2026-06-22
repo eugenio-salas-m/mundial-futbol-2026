@@ -836,6 +836,16 @@ export default function AuthenticatedHome() {
                 match.id
               )
             }
+            onKeyDown={async (e) => {
+              if (e.key === "Enter") {
+                await handleTodayBlur(
+                  match.id
+                );
+                (
+                  e.target as HTMLInputElement
+                ).blur();
+              }
+            }}
             onClick={(e) =>
               e.stopPropagation()
             }
@@ -901,6 +911,16 @@ export default function AuthenticatedHome() {
                 match.id
               )
             }
+            onKeyDown={async (e) => {
+              if (e.key === "Enter") {
+                await handleTodayBlur(
+                  match.id
+                );
+                (
+                  e.target as HTMLInputElement
+                ).blur();
+              }
+            }}
             onClick={(e) =>
               e.stopPropagation()
             }
