@@ -402,6 +402,9 @@ model RankingDailySummary {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  emailsSent   Boolean   @default(false) @map("emails_sent")
+  emailsSentAt DateTime? @map("emails_sent_at")
+
   organization Organization @relation(fields: [organizationId], references: [id])
   leaderUser   User?        @relation("DailySummaryLeader", fields: [leaderUserId], references: [id])
   topRiseUser  User?        @relation("DailySummaryRise", fields: [topRiseUserId], references: [id])

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateDailySummary }
 from "@/lib/ranking/generate-daily-summary";
-
+import { sendDailySummaryToAll }
+from "@/lib/email/send-daily-summary-to-all";
 export async function GET() {
 
   /*const token =
@@ -27,6 +28,8 @@ export async function GET() {
   }*/
 
   await generateDailySummary();
+
+  await sendDailySummaryToAll();
 
   return NextResponse.json({
     success: true
