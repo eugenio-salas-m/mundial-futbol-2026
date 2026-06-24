@@ -2,7 +2,7 @@
     "crons": [
       {
         "path": "/api/jobs/daily-summary",
-        "schedule": "45 23 * * *"
+        "schedule": "45 3 * * *"
       }
     ]
   }

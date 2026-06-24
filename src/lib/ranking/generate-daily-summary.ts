@@ -10,7 +10,16 @@ export async function generateDailySummary() {
       }
     });
 
-  const now = new Date();
+  const now =
+    new Date(
+      new Date().toLocaleString(
+        "en-US",
+        {
+          timeZone:
+            "America/Santiago"
+        }
+      )
+    );
 
   const todayStart =
     new Date(
@@ -23,6 +32,15 @@ export async function generateDailySummary() {
       0
     );
 
+    console.log({
+        now,
+        todayStart,
+        timezone:
+          Intl.DateTimeFormat()
+            .resolvedOptions()
+            .timeZone
+      });
+      
   const yesterdayEnd =
     new Date(todayStart);
 
