@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import {
+  processMatchResult
+} from "@/lib/scoring/process-match-result";
 
 export async function POST(
   request: Request
@@ -96,6 +99,10 @@ export async function POST(
     }
   });
 
+  await processMatchResult(
+    matchId
+  );
+  
   return NextResponse.json({
     success: true
   });

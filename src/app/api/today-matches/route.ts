@@ -173,7 +173,7 @@ export async function POST(
         return (
           matchDate ===
             chileTomorrow &&
-          hourChile < 12
+          hourChile < 24
         );
   
       }

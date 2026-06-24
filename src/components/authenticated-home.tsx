@@ -264,6 +264,54 @@ export default function AuthenticatedHome() {
 
     };
 
+  const generateDailySummary =
+    async () => {
+
+      const supabase =
+        createClient();
+
+      const { data } =
+        await supabase.auth.getUser();
+
+      if (!data.user) {
+        return;
+      }
+
+      const response =
+        await fetch(
+          "/api/admin/generate-daily-summary",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+            body: JSON.stringify({
+              authUserId:
+                data.user.id
+            })
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+
+        alert(
+          result.error
+        );
+
+        return;
+
+      }
+
+      alert(
+        `Resumen Diario generado`
+      );
+
+    };
+
   if (!user) {
     return null;
   }
@@ -1342,19 +1390,21 @@ export default function AuthenticatedHome() {
             Resultados Oficiales
           </a>
 
-          <a
-            href="/admin/scores"
+
+          <button
+            onClick={generateDailySummary}
             className="
               px-4
               py-2
               rounded
-              bg-orange-600
+              bg-yellow-600
               text-white
               text-center
             "
           >
-            Calcular Puntajes
-          </a>
+            Generar Resumen Diario
+          </button>
+
 
         </div>
 
