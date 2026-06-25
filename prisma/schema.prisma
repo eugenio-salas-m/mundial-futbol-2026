@@ -49,6 +49,8 @@ enum NotificationChannel {
 enum NotificationStatus {
   pending
   sent
+  delivered
+  read
   failed
 }
 
