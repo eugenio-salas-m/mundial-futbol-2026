@@ -4,6 +4,11 @@ export const whatsappTemplates = {
       languageCode: "es_CL"
     },
   
+    match_reminder: {
+      label: "Recordatorio de partido",
+      languageCode: "es_CL"
+    },
+
     ranking_update: {
       label: "Actualización de ranking",
       languageCode: "es_CL"
@@ -11,7 +16,7 @@ export const whatsappTemplates = {
   
     match_result: {
       label: "Resultado de partido",
-      languageCode: "es_CL"
+      languageCode: "en"
     },
     
     hello_world: {

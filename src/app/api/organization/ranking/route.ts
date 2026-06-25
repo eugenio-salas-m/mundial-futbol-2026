@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getOrganizationRanking }
+from "@/lib/ranking/get-organization-ranking";
 
 export async function POST(
   request: Request
@@ -47,65 +49,14 @@ export async function POST(
 
     }
 
-    const users =
-      await prisma.user.findMany({
-        where: {
-          organizationId:
-            currentUser.organizationId,
-          isActive: true
-        },
-        include: {
-          scores: true
-        }
-      });
-
-    const ranking =
-      users
-        .map(
-          (user) => ({
-
-            id: user.id,
-
-            nickname:
-              user.nickname,
-
-            avatarUrl:
-              user.avatarUrl,
-
-            totalPoints:
-              user.scores.reduce(
-                (
-                  total,
-                  score
-                ) =>
-                  total +
-                  score.points,
-                0
-              )
-
-          })
-        )
-        .sort(
-          (
-            a,
-            b
-          ) =>
-            b.totalPoints -
-            a.totalPoints
-        )
-        .map(
-          (
-            user,
-            index
-          ) => ({
-
-            ...user,
-
-            position:
-              index + 1
-
-          })
-        );
+    const {
+      ranking,
+      participantCount,
+      lastPoints
+    } =
+    await getOrganizationRanking(
+      currentUser.organizationId
+    );
 
     const myRanking =
       ranking.find(
@@ -114,21 +65,13 @@ export async function POST(
           currentUser.id
       );
 
-    const lastPoints =
-      ranking.length > 0
-        ? ranking[
-            ranking.length - 1
-          ].totalPoints
-        : 0;
-
     return NextResponse.json({
 
       myPosition:
         myRanking?.position ??
         null,
 
-      participantCount:
-        ranking.length,
+      participantCount,
 
       myPoints:
         myRanking

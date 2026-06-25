@@ -19,7 +19,7 @@ export async function sendDailySummaryEmail(
   await resend.emails.send({
 
     from:
-      "Mundial 2026 <onboarding@resend.dev>",
+      "Mundial Futbol 2026 <esalas@nubesys.cl>",
 
     to: recipients,
 

@@ -3,6 +3,8 @@ import { generateDailySummary }
 from "@/lib/ranking/generate-daily-summary";
 import { sendDailySummaryToAll }
 from "@/lib/email/send-daily-summary-to-all";
+import { sendDailySummaryWhatsAppToAll }
+from "@/lib/whatsapp/send-daily-summary-to-all";
 export async function GET() {
 
   /*const token =
@@ -30,6 +32,13 @@ export async function GET() {
   await generateDailySummary();
 
   await sendDailySummaryToAll();
+
+  try {
+    await sendDailySummaryWhatsAppToAll();
+  }
+  catch (error) {
+    console.error(error);
+  }
 
   return NextResponse.json({
     success: true

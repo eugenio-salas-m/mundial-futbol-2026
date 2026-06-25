@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { rebuildRankings }
 from "./rebuild-rankings";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp";
+import { whatsappTemplates } from "@/lib/whatsapp-templates";
 
 function getMatchOutcome(
   homeGoals: number,
@@ -118,6 +120,153 @@ function calculateKnockoutPoints(
   };
 }
 
+async function sendMatchResultWhatsApps(
+  matchId: string
+) {
+  const match =
+    await prisma.match.findUnique({
+      where: {
+        id: matchId
+      },
+      include: {
+        result: true,
+        homeTeam: true,
+        awayTeam: true
+      }
+    });
+
+  if (!match?.result) {
+    return;
+  }
+
+  const template =
+    whatsappTemplates.match_result;
+
+  const scores =
+    await prisma.score.findMany({
+      where: {
+        matchId
+      },
+      include: {
+        user: true
+      }
+    });
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const score of scores) {
+    const user =
+      score.user;
+
+    if (
+      !user.whatsappNumber ||
+      !user.whatsappOptIn ||
+      !user.isActive
+    ) {
+      skipped++;
+      continue;
+    }
+
+    const existingLog =
+      await prisma.notificationLog.findFirst({
+        where: {
+          userId:
+            user.id,
+          matchId,
+          channel:
+            "whatsapp",
+          templateCode:
+            "match_result",
+          status:
+            "sent"
+        }
+      });
+
+    if (existingLog) {
+      skipped++;
+      continue;
+    }
+
+    let log =
+      await prisma.notificationLog.create({
+        data: {
+          userId:
+            user.id,
+          organizationId:
+            user.organizationId,
+          matchId,
+          targetType:
+            "user",
+          channel:
+            "whatsapp",
+          templateCode:
+            "match_result",
+          status:
+            "pending"
+        }
+      });
+
+    try {
+      await sendWhatsAppTemplate(
+        user.whatsappNumber,
+        "match_result",
+        template.languageCode,
+        [
+          match.homeTeam.name,                 // {{1}}
+          match.result.homeGoals.toString(),   // {{2}}
+          match.awayTeam.name,                 // {{3}}
+          match.result.awayGoals.toString(),   // {{4}}
+          score.points.toString()              // {{5}}
+        ]
+      );
+
+      await prisma.notificationLog.update({
+        where: {
+          id:
+            log.id
+        },
+        data: {
+          status:
+            "sent",
+          sentAt:
+            new Date()
+        }
+      });
+
+      sent++;
+
+    } catch (error: any) {
+      await prisma.notificationLog.update({
+        where: {
+          id:
+            log.id
+        },
+        data: {
+          status:
+            "failed",
+          errorMessage:
+            error.message
+        }
+      });
+
+      failed++;
+
+      console.error(
+        `[WHATSAPP MATCH RESULT] Error user ${user.id}`,
+        error.message
+      );
+    }
+  }
+
+  console.log(
+    `[WHATSAPP MATCH RESULT] match ${matchId}: sent=${sent}, skipped=${skipped}, failed=${failed}`
+  );
+
+}
+
+
 export async function processMatchResult(
   matchId: string
 ) {
@@ -125,7 +274,9 @@ export async function processMatchResult(
     await prisma.match.findUnique({
       where: { id: matchId },
       include: {
-        result: true
+        result: true,
+        homeTeam: true,
+        awayTeam: true
       }
     });
 
@@ -219,6 +370,8 @@ export async function processMatchResult(
   console.log(
     `[MATCH ${matchId}] ${predictions.length} predictions processed`
   );
+
+  await sendMatchResultWhatsApps(matchId);
 
   await rebuildRankings(matchId);
 }

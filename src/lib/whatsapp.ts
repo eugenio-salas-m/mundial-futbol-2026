@@ -1,8 +1,15 @@
+type WhatsAppTemplateParameter =
+  | string
+  | {
+      name: string;
+      value: string;
+    };
+
 export async function sendWhatsAppTemplate(
     phoneNumber: string,
     templateName: string,
     languageCode: string,
-    parameters: string[]
+    parameters: WhatsAppTemplateParameter[]
   ) {
   
     console.log(
@@ -44,12 +51,23 @@ export async function sendWhatsAppTemplate(
                 {
                   type: "body",
                   parameters:
-                    parameters.map(
-                      value => ({
+                    parameters.map(parameter => {
+                      if (
+                        typeof parameter === "string"
+                      ) {
+                        return {
+                          type: "text",
+                          text: parameter
+                        };
+                      }
+                      return {
                         type: "text",
-                        text: value
-                      })
-                    )
+                        parameter_name:
+                          parameter.name,
+                        text:
+                          parameter.value
+                      };
+                    })
                 }
               ]
             }

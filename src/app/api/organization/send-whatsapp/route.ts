@@ -8,6 +8,17 @@ import {
   type WhatsAppTemplateCode
 } from "@/lib/whatsapp-templates";
 
+function getChileNow() {
+  return new Date(
+    new Date().toLocaleString(
+      "en-US",
+      {
+        timeZone: "America/Santiago"
+      }
+    )
+  );
+}
+
 export async function POST(
   request: Request
 ) {
@@ -120,17 +131,102 @@ export async function POST(
 
   }
 
-  let parameters: string[] = [];
+  type WhatsAppParameter =
+  | string
+  | {
+      name: string;
+      value: string;
+    };
+
+  let parameters: WhatsAppParameter[] = [];
 
   if (
     templateCode ===
     "reminder_prediction"
   ) {
+  
+    const now = getChileNow();
+
+    const todayStart =
+      new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
+
+    const tomorrowStart =
+      new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0,
+        0,
+        0,
+        0
+      );
+
+    const pendingMatches =
+      await prisma.match.findMany({
+        where: {
+          status: "scheduled",
+          startsAtChile: {
+            gte: todayStart,
+            lt: tomorrowStart
+          },
+          predictionClosesAt: {
+            gt: now
+          },
+          predictions: {
+            none: {
+              userId: target.id
+            }
+          }
+        },
+    
+        include: {
+          homeTeam: true,
+          awayTeam: true
+        }
+    
+      });
+    
+    console.log(
+      `[WHATSAPP] ${target.nickname} tiene ${pendingMatches.length} pronósticos pendientes desde ${todayStart} hasta ${tomorrowStart}  ahora ${now}`
+    );
+    
+    pendingMatches.forEach(match => {
+      console.log(
+        `${match.homeTeam.name} vs ${match.awayTeam.name} - ${match.startsAtChile.toISOString()}`
+      );
+    });
+  
+    if (
+      pendingMatches.length === 0
+    ) {
+  
+      return NextResponse.json(
+        {
+          error:
+            "El usuario no tiene pronósticos pendientes"
+        },
+        {
+          status: 400
+        }
+      );
+  
+    }
 
     parameters = [
-      target.nickname
+      {
+        name: "nombre",
+        value: target.nickname
+      }
     ];
-
+  
   }
 
   if (
@@ -147,11 +243,24 @@ export async function POST(
       });
 
       parameters = [
-        target.nickname,
-        standing?.organizationRank
-          ?.toString() ?? "-",
-        standing?.totalPoints
-          ?.toString() ?? "0"
+        {
+          name:
+            "nombre",
+          value:
+            target.nickname
+        },
+        {
+          name:
+            "posicion",
+          value:
+            standing?.organizationRank?.toString() ?? "-"
+        },
+        {
+          name:
+            "puntaje",
+          value:
+            standing?.totalPoints?.toString() ?? "0"
+        }
       ];
 
   }
@@ -161,14 +270,150 @@ export async function POST(
     "match_result"
   ) {
 
+    const lastScore =
+    await prisma.score.findFirst({
+
+      where: {
+        userId:
+          target.id
+      },
+
+      include: {
+
+        match: {
+          include: {
+            homeTeam: true,
+            awayTeam: true
+          }
+        }
+
+      },
+
+      orderBy: {
+        calculatedAt:
+          "desc"
+      }
+
+    });
+
+    if (!lastScore) {
+      return NextResponse.json(
+        {
+          error:
+            "No existen resultados calculados"
+        },
+        {
+          status: 400
+        }
+      );
+    }
+
+    const result =
+      await prisma.matchResult.findFirst({
+        where: {
+          matchId:
+            lastScore.matchId
+        }
+      });
+
+    if (!result) {
+
+      return NextResponse.json(
+        {
+          error:
+            "Resultado no encontrado"
+        },
+        {
+          status: 400
+        }
+      );
+
+    }
+
     parameters = [
-      "Último partido",
-      "-",
-      "Resultado",
-      "-",
-      "0"
+      lastScore.match.homeTeam.name,          // {{1}}
+      result.homeGoals.toString(),            // {{2}}
+      lastScore.match.awayTeam.name,          // {{3}}
+      result.awayGoals.toString(),            // {{4}}
+      lastScore.points.toString()             // {{5}}
     ];
 
+  }
+
+  if (
+    templateCode ===
+    "match_reminder"
+  ) {
+  
+    const nextMatch =
+      await prisma.match.findFirst({
+        where: {
+          status:
+            "scheduled",
+          predictionClosesAt: {
+            gt: new Date()
+          },
+          predictions: {
+            none: {
+              userId:
+                target.id
+            }
+          }
+        },
+        include: {
+          homeTeam: true,
+          awayTeam: true
+        },
+        orderBy: {
+          startsAtChile:
+            "asc"
+        }
+      });
+  
+    if (!nextMatch) {
+      return NextResponse.json(
+        {
+          error:
+            "No existen partidos pendientes"
+        },
+        {
+          status: 400
+        }
+      );
+    }
+  
+    const minutes =
+      Math.max(
+        1,
+        Math.round(
+          (
+            nextMatch.startsAtChile.getTime() -
+            Date.now()
+          ) / 60000
+        )
+      );
+  
+    parameters = [
+      {
+        name:
+          "local",
+        value:
+          nextMatch.homeTeam.name
+      },
+      {
+        name:
+          "visita",
+        value:
+          nextMatch.awayTeam.name
+      },
+      {
+        name:
+          "tiempo",
+        value:
+          `${minutes} minutos`
+      }
+    ];
+  
   }
 
   let log =
