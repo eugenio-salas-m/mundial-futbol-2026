@@ -345,6 +345,9 @@ model NotificationLog {
   templateCode   String                 @map("template_code") @db.VarChar(80)
   status         NotificationStatus
   sentAt         DateTime?              @map("sent_at")
+  providerMessageId String? @map("provider_message_id") @db.VarChar(200)
+  requestPayload Json? @map("request_payload")
+  providerResponse Json? @map("provider_response")
   errorMessage   String?                @map("error_message")
   createdAt      DateTime               @default(now()) @map("created_at")
 

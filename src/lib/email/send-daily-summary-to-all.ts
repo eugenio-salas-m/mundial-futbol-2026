@@ -26,7 +26,9 @@ const latestSummary =
     await prisma.user.findMany({
 
       where: {
-        isActive: true
+        isActive: true,
+        organizationId:
+          latestSummary.organizationId
       },
 
       select: {

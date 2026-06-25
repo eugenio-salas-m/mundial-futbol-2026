@@ -435,12 +435,16 @@ export async function POST(
 
   try {
 
-    await sendWhatsAppTemplate(
-      target.whatsappNumber,
-      templateCode,
-      template.languageCode,
-      parameters
-    );
+    const result =
+      await sendWhatsAppTemplate({
+        phoneNumber:
+          target.whatsappNumber!,
+        templateName:
+          templateCode,
+        languageCode:
+          template.languageCode,
+        parameters
+      });
 
     log =
       await prisma.notificationLog.update({
@@ -452,7 +456,13 @@ export async function POST(
           status:
             "sent",
           sentAt:
-            new Date()
+            new Date(),
+          providerMessageId:
+            result.providerMessageId,
+          requestPayload:
+            result.requestPayload,
+          providerResponse:
+            result.providerResponse
         }
       });
 

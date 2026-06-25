@@ -5,22 +5,64 @@ type WhatsAppTemplateParameter =
       value: string;
     };
 
-export async function sendWhatsAppTemplate(
-    phoneNumber: string,
-    templateName: string,
-    languageCode: string,
-    parameters: WhatsAppTemplateParameter[]
-  ) {
+type SendWhatsAppTemplateRequest = {
+  phoneNumber: string;
+  templateName: string;
+  languageCode: string;
+  parameters: WhatsAppTemplateParameter[];
+};
+
+export async function sendWhatsAppTemplate({
+    phoneNumber,
+    templateName,
+    languageCode,
+    parameters
+  }: SendWhatsAppTemplateRequest) {
   
     console.log(
-        "PHONE ID:",
-        process.env.WHATSAPP_PHONE_NUMBER_ID
-      );
-      
-      console.log(
-        "TOKEN:",
-        process.env.WHATSAPP_ACCESS_TOKEN
-      );
+      `[WHATSAPP] ${templateName} -> ${phoneNumber}`
+    );
+
+
+    const body = {
+      messaging_product:
+        "whatsapp",
+      to:
+        phoneNumber,
+      type:
+        "template",
+      template: {
+        name:
+          templateName,
+        language: {
+          code:
+            languageCode
+        },
+        components: [
+          {
+            type: "body",
+            parameters:
+              parameters.map(parameter => {
+                if (
+                  typeof parameter === "string"
+                ) {
+                  return {
+                    type: "text",
+                    text: parameter
+                  };
+                }
+                return {
+                  type: "text",
+                  parameter_name:
+                    parameter.name,
+                  text:
+                    parameter.value
+                };
+              })
+          }
+        ]
+      }
+    } as const;
 
     const response =
       await fetch(
@@ -33,45 +75,7 @@ export async function sendWhatsAppTemplate(
             "Content-Type":
               "application/json"
           },
-          body: JSON.stringify({
-            messaging_product:
-              "whatsapp",
-            to:
-              phoneNumber,
-            type:
-              "template",
-            template: {
-              name:
-                templateName,
-              language: {
-                code:
-                  languageCode
-              },
-              components: [
-                {
-                  type: "body",
-                  parameters:
-                    parameters.map(parameter => {
-                      if (
-                        typeof parameter === "string"
-                      ) {
-                        return {
-                          type: "text",
-                          text: parameter
-                        };
-                      }
-                      return {
-                        type: "text",
-                        parameter_name:
-                          parameter.name,
-                        text:
-                          parameter.value
-                      };
-                    })
-                }
-              ]
-            }
-          })
+          body: JSON.stringify(body)
         }
       );
   
@@ -84,6 +88,13 @@ export async function sendWhatsAppTemplate(
       );
     }
   
-    return data;
+    return {
+      providerMessageId:
+        data.messages?.[0]?.id ?? null,
+      providerResponse:
+        data,
+      requestPayload:
+        body
+    };
   
   }

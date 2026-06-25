@@ -4,6 +4,13 @@ from "./rebuild-rankings";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 import { whatsappTemplates } from "@/lib/whatsapp-templates";
 
+type WhatsAppParameter =
+  | string
+  | {
+      name: string;
+      value: string;
+    };
+    
 function getMatchOutcome(
   homeGoals: number,
   awayGoals: number
@@ -209,18 +216,26 @@ async function sendMatchResultWhatsApps(
       });
 
     try {
-      await sendWhatsAppTemplate(
-        user.whatsappNumber,
-        "match_result",
-        template.languageCode,
-        [
-          match.homeTeam.name,                 // {{1}}
-          match.result.homeGoals.toString(),   // {{2}}
-          match.awayTeam.name,                 // {{3}}
-          match.result.awayGoals.toString(),   // {{4}}
-          score.points.toString()              // {{5}}
-        ]
-      );
+
+      let parameters: WhatsAppParameter[] = [
+        match.homeTeam.name,                 // {{1}}
+        match.result.homeGoals.toString(),   // {{2}}
+        match.awayTeam.name,                 // {{3}}
+        match.result.awayGoals.toString(),   // {{4}}
+        score.points.toString()              // {{5}}
+      ];
+
+      const result =
+        await sendWhatsAppTemplate({
+          phoneNumber:
+            user.whatsappNumber!,
+          templateName:
+            "match_result",
+          languageCode:
+            template.languageCode,
+          parameters
+        });
+
 
       await prisma.notificationLog.update({
         where: {
@@ -231,7 +246,13 @@ async function sendMatchResultWhatsApps(
           status:
             "sent",
           sentAt:
-            new Date()
+            new Date(),
+          providerMessageId:
+            result.providerMessageId,
+          requestPayload:
+            result.requestPayload,
+          providerResponse:
+            result.providerResponse
         }
       });
 

@@ -8,6 +8,13 @@ export async function sendDailySummaryWhatsAppToAll() {
   const template =
     whatsappTemplates.ranking_update;
 
+  type WhatsAppParameter =
+    | string
+    | {
+        name: string;
+        value: string;
+      };
+
   const users =
     await prisma.user.findMany({
       where: {
@@ -118,25 +125,34 @@ export async function sendDailySummaryWhatsAppToAll() {
 
     try {
 
-      await sendWhatsAppTemplate(
-        user.whatsappNumber!,
-        "ranking_update",
-        template.languageCode,
-        [
-          {
-            name: "nombre",
-            value: user.nickname
-          },
-          {
-            name: "posicion",
-            value: myRanking.position.toString()
-          },
-          {
-            name: "puntaje",
-            value: myRanking.totalPoints.toString()
-          }
-        ]
-      );
+      let parameters: WhatsAppParameter[] = [
+        {
+          name: "nombre",
+          value: user.nickname
+        },
+        {
+          name: "posicion",
+          value: myRanking.position.toString()
+        },
+        {
+          name: "puntaje",
+          value: myRanking.totalPoints.toString()
+        }
+      ];
+
+      const result =
+        await sendWhatsAppTemplate({
+          phoneNumber:
+            user.whatsappNumber!,
+          templateName:
+            "ranking_update",
+          languageCode:
+            template.languageCode,
+          parameters
+        });
+
+
+
 
       await prisma.notificationLog.update({
         where: {
@@ -147,7 +163,13 @@ export async function sendDailySummaryWhatsAppToAll() {
           status:
             "sent",
           sentAt:
-            new Date()
+            new Date(),
+          providerMessageId:
+            result.providerMessageId,
+          requestPayload:
+            result.requestPayload,
+          providerResponse:
+            result.providerResponse
         }
       });
 
