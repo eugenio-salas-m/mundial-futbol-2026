@@ -64,6 +64,35 @@ enum AvatarMode {
   ai
 }
 
+enum ConversationState {
+  main_menu
+  prediction_help
+  awaiting_prediction
+  awaiting_confirmation
+}
+
+enum MessageDirection {
+  incoming
+  outgoing
+}
+
+enum ConversationMessageType {
+  text
+  button
+  interactive
+  image
+  document
+  audio
+  video
+  location
+}
+
+enum ConversationChannel {
+  whatsapp
+  telegram
+  webchat
+}
+
 model Organization {
   id                     String             @id @default(uuid()) @db.Uuid
   name                   String             @db.VarChar(150)
@@ -82,6 +111,7 @@ model Organization {
   notificationLogs   NotificationLog[]
   rankingSnapshots   RankingSnapshot[]
   dailySummaries     RankingDailySummary[]
+  conversationSessions ConversationSession[]
 
   @@map("organizations")
 }
@@ -134,6 +164,7 @@ model User {
   dailySummaryLeader RankingDailySummary[]   @relation("DailySummaryLeader")
   dailySummaryRise   RankingDailySummary[]   @relation("DailySummaryRise")
   dailySummaryFall   RankingDailySummary[]   @relation("DailySummaryFall")
+  conversationSessions ConversationSession[]
 
   @@index([organizationId])
   @@index([role])
@@ -419,4 +450,43 @@ model RankingDailySummary {
   @@index([organizationId])
   @@index([summaryDate])
   @@map("ranking_daily_summaries")
+}
+
+model ConversationSession {
+  id             String   @id @default(uuid()) @db.Uuid
+  phoneNumber    String   @map("phone_number") @db.VarChar(30)
+  channel        ConversationChannel @default(whatsapp)
+  userId         String?  @map("user_id") @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  state          ConversationState @default(main_menu)
+  context        Json?
+  lastMessageAt  DateTime @map("last_message_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user         User?         @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  messages ConversationMessage[]
+
+  @@unique([channel, phoneNumber])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("conversation_sessions")
+}
+
+model ConversationMessage {
+  id            String   @id @default(uuid()) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  direction     MessageDirection
+  messageType   ConversationMessageType @default(text)  @map("message_type")
+  text          String?
+  providerMessageId String? @map("provider_message_id")
+  payload       Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  session ConversationSession       @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@map("conversation_messages")
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { processIncomingMessage }
+from "@/lib/whatsapp/process-incoming-message";
 
 export async function GET(
   request: Request
@@ -61,84 +63,98 @@ export async function POST(
     const body =
       await request.json();
   
-    const statuses =
-      body.entry?.[0]
-          ?.changes?.[0]
-          ?.value?.statuses;
-
-    if (
-        statuses &&
-        statuses.length > 0
-    ) {
-        for (
-            const status
-            of statuses
-        ) {
-            const log =
-                await prisma.notificationLog.findFirst({
-                    where: {
-                    providerMessageId:
-                        status.id
-                    }
-                });
-            if (!log) {
-                console.log(
-                    `[WHATSAPP STATUS] Message ${status.id} not found`
-                );
-                continue;
-            }
-            
-            if(log){
-
-                let newStatus = log.status;
-                switch (status.status) {
-                case "sent":
-                    newStatus = "sent";
-                    break;
-                case "delivered":
-                    newStatus = "delivered";
-                    break;
-                case "read":
-                    newStatus = "read";
-                    break;
-                case "failed":
-                    newStatus = "failed";
-                    break;
-                default:
-                    continue;
-                }
-                if (
-                    newStatus !==
-                    log.status
+    for (const entry of body.entry ?? []) {
+        for (const change of entry.changes ?? []) {
+            const value = change.value;
+      
+            const statuses =  value?.statuses;
+      
+            if (
+                statuses &&
+                statuses.length > 0
+            ) {
+                for (
+                    const status
+                    of statuses
                 ) {
-                    await prisma.notificationLog.update({
-                        where: {
-                        id:
-                            log.id
-                        },
-                        data: {
-                        status:
-                            newStatus
+                    const log =
+                        await prisma.notificationLog.findFirst({
+                            where: {
+                            providerMessageId:
+                                status.id
+                            }
+                        });
+                    if (!log) {
+                        console.log(`[WHATSAPP STATUS] Message ${status.id} not found`);
+                        continue;
+                    } else {
+                        let newStatus = log.status;
+                        switch (status.status) {
+                        case "sent":
+                            newStatus = "sent";
+                            break;
+                        case "delivered":
+                            newStatus = "delivered";
+                            break;
+                        case "read":
+                            newStatus = "read";
+                            break;
+                        case "failed":
+                            newStatus = "failed";
+                            break;
+                        default:
+                            continue;
                         }
-                    });
-                    console.log(
-                        `[WHATSAPP STATUS] ${log.providerMessageId} -> ${newStatus}`
-                      );
+                        if (
+                            newStatus !==
+                            log.status
+                        ) {
+                            await prisma.notificationLog.update({
+                                where: {
+                                id:
+                                    log.id
+                                },
+                                data: {
+                                status:
+                                    newStatus
+                                }
+                            });
+                            console.log(`[WHATSAPP STATUS] ${log.providerMessageId} -> ${newStatus}`);
+                        }
+                    }
                 }
             }
+
+            
+            const messages =  value?.messages;
+            const contacts = value?.contacts;
+            if (
+                messages &&
+                messages.length > 0
+            ) {
+                for (
+                    let i = 0;
+                    i < messages.length;
+                    i++
+                ) {
+                    await processIncomingMessage(
+                        messages[i],
+                        contacts?.[i]
+                    );
+                }
+            }
+      
         }
     }
+      
 
     console.log(
-  
       "[WHATSAPP WEBHOOK]",
-  
       JSON.stringify(
         body,
         null,
         2
       )
-  
     );
   
     return NextResponse.json({
