@@ -123,36 +123,31 @@ Muy pronto también responderé preguntas usando IA.`;
 
   }
 
-  await sendWhatsAppMessage(
-
-    request.phoneNumber,
-
-    response
-
-  );
+  const responseMessage =
+    await sendWhatsAppMessage(
+        request.phoneNumber,
+        response
+    );
 
   //
   // Registrar mensaje saliente
   //
 
   await prisma.conversationMessage.create({
-
     data: {
-
       sessionId:
         session.id,
-
       direction:
         "outgoing",
-
       messageType:
         "text",
-
       text:
-        response
-
+        response,
+      providerMessageId:
+        responseMessage.providerMessageId,
+      payload:
+        responseMessage.providerResponse
     }
-
   });
 
   //
@@ -160,24 +155,16 @@ Muy pronto también responderé preguntas usando IA.`;
   //
 
   await prisma.conversationSession.update({
-
     where: {
-
       id:
         session.id
-
     },
-
     data: {
-
       state:
         newState,
-
       lastMessageAt:
         new Date()
-
     }
-
   });
 
 }

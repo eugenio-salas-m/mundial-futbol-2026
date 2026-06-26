@@ -84,42 +84,43 @@ export async function POST(
                                 status.id
                             }
                         });
-                    if (!log) {
-                        console.log(`[WHATSAPP STATUS] Message ${status.id} not found`);
-                        continue;
-                    } else {
-                        let newStatus = log.status;
-                        switch (status.status) {
-                        case "sent":
-                            newStatus = "sent";
-                            break;
-                        case "delivered":
-                            newStatus = "delivered";
-                            break;
-                        case "read":
-                            newStatus = "read";
-                            break;
-                        case "failed":
-                            newStatus = "failed";
-                            break;
-                        default:
-                            continue;
-                        }
-                        if (
-                            newStatus !==
-                            log.status
-                        ) {
+                    if (log) {
+                        if ( status.status !== log.status ) {
                             await prisma.notificationLog.update({
                                 where: {
-                                id:
-                                    log.id
+                                    id:
+                                        log.id
                                 },
                                 data: {
-                                status:
-                                    newStatus
+                                    status:
+                                        status.status
                                 }
                             });
-                            console.log(`[WHATSAPP STATUS] ${log.providerMessageId} -> ${newStatus}`);
+                            console.log(`[WHATSAPP STATUS] ${log.providerMessageId} -> ${status.status}`);
+                        }
+                    } else {
+                        const msg =
+                        await prisma.conversationMessage.findFirst({
+                            where: {
+                            providerMessageId:
+                                status.id
+                            }
+                        });
+                        if (msg) {
+                            await prisma.conversationMessage.update({
+                                where: {
+                                    id:
+                                        msg.id
+                                },
+                                data: {
+                                    status:
+                                        status.status
+                                }
+                            });
+                            console.log(`[WHATSAPP STATUS] ${msg.providerMessageId} -> ${status.status}`);
+                        }else{
+                            console.log(`[WHATSAPP STATUS] Message ${status.id} not found`);
+                            continue;
                         }
                     }
                 }

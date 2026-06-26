@@ -484,7 +484,8 @@ model ConversationMessage {
   providerMessageId String? @map("provider_message_id")
   payload       Json?
   createdAt     DateTime @default(now()) @map("created_at")
-
+  status NotificationStatus @default(sent)
+  
   session ConversationSession       @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId])

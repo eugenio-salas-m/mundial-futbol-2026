@@ -3,6 +3,19 @@ export async function sendWhatsAppMessage(
     text: string
   ) {
   
+    const body = {
+        messaging_product:
+          "whatsapp",
+        to:
+          phoneNumber,
+        type:
+          "text",
+        text: {
+          body:
+            text
+        }
+      };
+
     const response =
       await fetch(
         `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -15,18 +28,7 @@ export async function sendWhatsAppMessage(
               "application/json"
           },
   
-          body: JSON.stringify({
-            messaging_product:
-              "whatsapp",
-            to:
-              phoneNumber,
-            type:
-              "text",
-            text: {
-              body:
-                text
-            }
-          })
+          body: JSON.stringify(body)
         }
       );
   
@@ -39,6 +41,13 @@ export async function sendWhatsAppMessage(
       );
     }
   
-    return data;
+    return {
+      providerMessageId:
+        data.messages?.[0]?.id ?? null,
+      providerResponse:
+        data,
+      requestPayload:
+        body
+    };
   
   }
