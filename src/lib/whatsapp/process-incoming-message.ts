@@ -14,6 +14,16 @@ export async function processIncomingMessage(
             text =
                 message.text.body;
             break;
+        case "button": 
+
+            text =
+                message.button?.text;
+        
+            buttonId =
+                message.button?.payload;
+        
+            break;
+            
         case "interactive":
             if (
                 message.interactive?.type === "button_reply"
