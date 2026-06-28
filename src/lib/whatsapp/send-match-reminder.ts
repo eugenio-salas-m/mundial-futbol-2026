@@ -45,6 +45,29 @@ export async function sendMatchReminder(
 
   try {
 
+    const now = new Date();
+
+    const diffMs =
+      match.startsAtChile.getTime() -
+      now.getTime();
+
+    const diffMinutes =
+      Math.max(0, Math.round(diffMs / 60000));
+
+    let tiempo = "";
+
+    if (diffMinutes < 60) {
+      tiempo = `${diffMinutes} minutos`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+
+      tiempo =
+        minutes === 0
+          ? `${hours} hora${hours === 1 ? "" : "s"}`
+          : `${hours} hora${hours === 1 ? "" : "s"} y ${minutes} minutos`;
+    }
+
     let parameters: WhatsAppParameter[] = [
         {
           name: "nombre",
@@ -57,6 +80,10 @@ export async function sendMatchReminder(
         {
           name: "visita",
           value: match.awayTeam.name
+        },
+        {
+          name: "tiempo",
+          value: tiempo
         }
     ];
 
