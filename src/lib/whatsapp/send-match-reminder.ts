@@ -70,10 +70,6 @@ export async function sendMatchReminder(
 
     let parameters: WhatsAppParameter[] = [
         {
-          name: "nombre",
-          value: user.nickname
-        },
-        {
           name: "local",
           value: match.homeTeam.name
         },
