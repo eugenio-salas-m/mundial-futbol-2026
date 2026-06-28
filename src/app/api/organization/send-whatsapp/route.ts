@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import {
-  sendWhatsAppTemplate
-} from "@/lib/whatsapp";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/send-whatsapp-template";
 import {
   whatsappTemplates,
   type WhatsAppTemplateCode
-} from "@/lib/whatsapp-templates";
+} from "@/lib/whatsapp/whatsapp-templates";
+import { getOrCreateSession } from "@/lib/conversation/get-or-create-session";
+import { ConversationChannel, ConversationState, Prisma } from "@prisma/client";
+import { sendMatchReminders } from "@/lib/whatsapp/send-match-reminders";
 
 function getChileNow() {
   return new Date(
@@ -344,75 +345,13 @@ export async function POST(
     templateCode ===
     "match_reminder"
   ) {
-  
-    const nextMatch =
-      await prisma.match.findFirst({
-        where: {
-          status:
-            "scheduled",
-          predictionClosesAt: {
-            gt: new Date()
-          },
-          predictions: {
-            none: {
-              userId:
-                target.id
-            }
-          }
-        },
-        include: {
-          homeTeam: true,
-          awayTeam: true
-        },
-        orderBy: {
-          startsAtChile:
-            "asc"
-        }
-      });
-  
-    if (!nextMatch) {
-      return NextResponse.json(
-        {
-          error:
-            "No existen partidos pendientes"
-        },
-        {
-          status: 400
-        }
-      );
-    }
-  
-    const minutes =
-      Math.max(
-        1,
-        Math.round(
-          (
-            nextMatch.startsAtChile.getTime() -
-            Date.now()
-          ) / 60000
-        )
-      );
-  
-    parameters = [
-      {
-        name:
-          "local",
-        value:
-          nextMatch.homeTeam.name
-      },
-      {
-        name:
-          "visita",
-        value:
-          nextMatch.awayTeam.name
-      },
-      {
-        name:
-          "tiempo",
-        value:
-          `${minutes} minutos`
-      }
-    ];
+    await sendMatchReminders(
+      userId
+    );
+
+    return NextResponse.json({
+        success: true
+    });
   
   }
 
@@ -465,6 +404,26 @@ export async function POST(
             result.providerResponse
         }
       });
+
+    const session =
+      await getOrCreateSession(
+          ConversationChannel.whatsapp,
+          target.whatsappNumber!
+      );
+
+    session.state = ConversationState.main_menu;
+    if ( templateCode === "match_reminder" ) { session.state = ConversationState.prediction_help; } 
+
+    await prisma.conversationSession.update({
+        where: {
+            id: session.id
+        },
+        data: {
+            state: session.state,
+            context: Prisma.DbNull,
+            lastMessageAt: new Date()
+        }
+    });
 
     return NextResponse.json({
       ok: true,

@@ -7,27 +7,25 @@ import { sendDailySummaryWhatsAppToAll }
 from "@/lib/whatsapp/send-daily-summary-to-all";
 export async function GET() {
 
-  /*const token =
-    request.headers.get(
-      "x-job-token"
-    );
+  /*
+  const apiKey =
+      request.headers.get("x-api-key");
 
   if (
-    token !==
-    process.env.JOB_TOKEN
+      apiKey !== process.env.CRON_API_KEY
   ) {
 
-    return NextResponse.json(
-      {
-        error:
-          "Unauthorized"
-      },
-      {
-        status: 401
-      }
-    );
+      return NextResponse.json(
+          {
+              error: "Unauthorized"
+          },
+          {
+              status: 401
+          }
+      );
 
-  }*/
+  }
+  */
 
   await generateDailySummary();
 

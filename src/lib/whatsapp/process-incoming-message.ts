@@ -5,14 +5,36 @@ export async function processIncomingMessage(
     message: any,
     contact: any
 ) {
-    if (
-        message.type !== "text"
-    ) {
-        return;
+
+    let text = "";
+    let buttonId: string | undefined;
+
+    switch (message.type) {
+        case "text":
+            text =
+                message.text.body;
+            break;
+        case "interactive":
+            if (
+                message.interactive?.type === "button_reply"
+            ) {
+                text =
+                    message.interactive.button_reply.title;
+                buttonId =
+                    message.interactive.button_reply.id;
+            }
+            break;
+        default:
+            console.log(
+                `[INCOMING] Unsupported message type: ${message.type}`
+            );
+            return;
+
     }
 
     await processConversation({
-        channel: ConversationChannel.whatsapp,
+        channel:
+            ConversationChannel.whatsapp,
         phoneNumber:
             message.from,
         userName:
@@ -20,11 +42,13 @@ export async function processIncomingMessage(
         messageId:
             message.id,
         timestamp:
-            Number(
-                message.timestamp
-            ),
-        text:
-            message.text.body
+            Number(message.timestamp),
+        text,
+        buttonId
     });
-    console.log(`[INCOMING] ${contact?.profile?.name}: ${message.text.body}`);
+
+    console.log(
+        `[INCOMING] ${contact?.profile?.name}: ${text}`
+    );
+
 }

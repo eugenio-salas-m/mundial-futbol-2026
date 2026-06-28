@@ -93,6 +93,11 @@ enum ConversationChannel {
   webchat
 }
 
+enum PredictionEntrySource {
+  web
+  whatsapp_ai
+}
+
 model Organization {
   id                     String             @id @default(uuid()) @db.Uuid
   name                   String             @db.VarChar(150)
@@ -264,6 +269,7 @@ model Prediction {
   qualifiedTeamId String?  @map("qualified_team_id") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
+  entrySource PredictionEntrySource @default(web)
 
   user          User  @relation(fields: [userId], references: [id])
   match         Match @relation(fields: [matchId], references: [id])
@@ -388,6 +394,8 @@ model NotificationLog {
   organization Organization? @relation(fields: [organizationId], references: [id])
   match        Match?        @relation(fields: [matchId], references: [id])
 
+  messages ConversationMessage[]
+  
   @@index([userId])
   @@index([organizationId])
   @@index([status])
@@ -485,9 +493,12 @@ model ConversationMessage {
   payload       Json?
   createdAt     DateTime @default(now()) @map("created_at")
   status NotificationStatus @default(sent)
-  
+  notificationLogId String? @map("notification_log_id") @db.Uuid
+
   session ConversationSession       @relation(fields: [sessionId], references: [id])
+  notificationLog NotificationLog?  @relation(fields: [notificationLogId], references: [id])
 
   @@index([sessionId])
+  @@index([notificationLogId])
   @@map("conversation_messages")
 }

@@ -832,16 +832,16 @@ export default function OrganizationPage() {
                     type="radio"
                     checked={
                       selectedTemplate ===
-                      "hello_world"
+                      "match_reminder"
                     }
                     onChange={() =>
                       setSelectedTemplate(
-                        "hello_world"
+                        "match_reminder"
                       )
                     }
                   />
 
-                  Prueba Meta
+                  Recordatorio próximo partido sin pronóstico
 
                 </label>
 

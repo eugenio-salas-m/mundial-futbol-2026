@@ -1,8 +1,9 @@
 const OPENAI_API_KEY =
   process.env.OPENAI_API_KEY!;
 
-export async function generateMatchAdvice(
-  prompt: string
+async function callOpenAI(
+  prompt: string,
+  temperature = 0.8
 ) {
 
   const response =
@@ -18,7 +19,7 @@ export async function generateMatchAdvice(
         },
         body: JSON.stringify({
           model: "gpt-4.1-mini",
-          temperature: 0.8,
+          temperature: temperature,
           messages: [
             {
               role: "system",
@@ -32,9 +33,7 @@ export async function generateMatchAdvice(
                 - "faltan datos"
                 - "no hay suficiente información"
                 - "no se proporcionó contexto"
-                Nunca entregues marcadores exactos.
-                Nunca recomiendes apuestas.
-                Tus respuestas deben parecer comentarios para aficionados al fútbol, no informes técnicos.`
+                `
             },
             {
               role: "user",
@@ -56,7 +55,122 @@ export async function generateMatchAdvice(
   const json =
     await response.json();
 
-  return json.choices[0]
-    .message.content;
+  const content =
+    json.choices?.[0]?.message?.content;
+  
+  if (!content) {
+    throw new Error(
+      "Empty OpenAI response."
+    );
+  }
+  
+  return content;
+
+}
+
+export async function generateMatchAdvice(
+  prompt: string
+) {
+
+  prompt = `${prompt}
+       
+        Genera un comentario breve indicando:
+
+        1. Momento reciente de cada selección.
+        2. Aspectos que podrían influir.
+        3. Qué tipo de partido podría esperarse.
+
+        Nunca entregues marcadores exactos.
+        Nunca recomiendes apuestas.
+        Tus respuestas deben parecer comentarios para aficionados al fútbol, no informes técnicos.
+        Máximo 60 palabras.`;
+  const response =
+    await callOpenAI(prompt,0.8);
+  return response;
+}
+
+export interface MatchSuggestion {
+  winner:
+    "home" |
+    "away" |
+    "draw";
+  explanation:
+    string;
+  suggestions: {
+    homeGoals:
+      number;
+    awayGoals:
+      number;
+  }[];
+}
+
+//
+// Conversación WhatsApp
+//
+
+export async function generateMatchSuggestions(
+  prompt: string
+): Promise<MatchSuggestion> {
+
+  prompt = `${prompt}
+
+Debes responder EXCLUSIVAMENTE un JSON válido.
+Con la información entregada:
+
+1. Determina el ganador probable.
+winner puede ser:
+- home
+- away
+- draw
+
+2. Genera exactamente cinco marcadores distintos.
+
+3. Todos los marcadores deben ser coherentes con el mismo ganador.
+
+4. Ordénalos desde el más probable al menos probable.
+
+5. Escribe una explicación breve en español (máximo 180 caracteres).
+
+Formato:
+
+{
+  "winner":"home",
+  "explanation":"...",
+  "suggestions":[
+    {
+      "homeGoals":2,
+      "awayGoals":1
+    },
+    {
+      "homeGoals":3,
+      "awayGoals":1
+    },
+    {
+      "homeGoals":1,
+      "awayGoals":0
+    },
+    {
+      "homeGoals":2,
+      "awayGoals":0
+    },
+    {
+      "homeGoals":3,
+      "awayGoals":2
+    }
+  ]
+}
+
+No escribas ningún texto fuera del JSON.`;
+  const response =
+    await callOpenAI(prompt, 0.3);
+
+  try {
+      return JSON.parse(response.trim());
+  }
+  catch {
+      throw new Error(
+          "Invalid AI JSON response."
+      );
+  }
 
 }

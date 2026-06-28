@@ -1,7 +1,19 @@
-export async function sendWhatsAppMessage(
-    phoneNumber: string,
-    text: string
-  ) {
+import { prisma } from "@/lib/prisma";
+import { ConversationSession } from "@prisma/client";
+
+type SendWhatsAppMessageRequest = {
+  session: ConversationSession;
+  phoneNumber: string;
+  text: string;
+  notificationLogId?: string
+};
+
+export async function sendWhatsAppMessage({
+  session,
+  phoneNumber,
+  text,
+  notificationLogId
+}: SendWhatsAppMessageRequest) {
   
     const body = {
         messaging_product:
@@ -15,6 +27,8 @@ export async function sendWhatsAppMessage(
             text
         }
       };
+
+    console.log("[WHATSAPP OUTGOING]",JSON.stringify(body));
 
     const response =
       await fetch(
@@ -35,12 +49,55 @@ export async function sendWhatsAppMessage(
     const data =
       await response.json();
   
+    console.log("[WHATSAPP RESPONSE]",JSON.stringify(data));
+
     if (!response.ok) {
       throw new Error(
         JSON.stringify(data)
       );
     }
   
+    
+    //
+    // Registrar mensaje saliente
+    //
+
+    await prisma.conversationMessage.create({
+      data: {
+      sessionId:
+          session.id,
+      direction:
+          "outgoing",
+      messageType:
+          "text",
+      text:
+        text,
+      providerMessageId:
+        data.messages?.[0]?.id ?? null,
+      notificationLogId:
+        notificationLogId,
+      payload:
+        data
+      }
+    });
+
+    //
+    // Actualizar sesión
+    //
+
+    await prisma.conversationSession.update({
+        where: {
+        id:
+            session.id
+        },
+        data: {
+        state:
+            session.state,
+        lastMessageAt:
+            new Date()
+        }
+    });
+
     return {
       providerMessageId:
         data.messages?.[0]?.id ?? null,

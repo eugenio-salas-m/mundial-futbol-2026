@@ -1,19 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { sendWhatsAppTemplate } from "@/lib/whatsapp";
-import { whatsappTemplates } from "@/lib/whatsapp-templates";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/send-whatsapp-template";
+import { whatsappTemplates } from "@/lib/whatsapp/whatsapp-templates";
 import { getOrganizationRanking } from "@/lib/ranking/get-organization-ranking";
+import { getOrCreateSession } from "@/lib/conversation/get-or-create-session";
+import { ConversationChannel, ConversationState, Prisma } from "@prisma/client";
+
+type WhatsAppParameter =
+  | string
+  | {
+      name: string;
+      value: string;
+    };
 
 export async function sendDailySummaryWhatsAppToAll() {
 
   const template =
     whatsappTemplates.ranking_update;
-
-  type WhatsAppParameter =
-    | string
-    | {
-        name: string;
-        value: string;
-      };
 
   const users =
     await prisma.user.findMany({
@@ -171,6 +173,25 @@ export async function sendDailySummaryWhatsAppToAll() {
           providerResponse:
             result.providerResponse
         }
+      });
+
+      const session =
+        await getOrCreateSession(
+            ConversationChannel.whatsapp,
+            user.whatsappNumber!
+        );
+
+      session.state = ConversationState.main_menu;
+
+      await prisma.conversationSession.update({
+          where: {
+              id: session.id
+          },
+          data: {
+              state: session.state,
+              context: Prisma.DbNull,
+              lastMessageAt: new Date()
+          }
       });
 
       sent++;

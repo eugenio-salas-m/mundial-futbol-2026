@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { rebuildRankings }
 from "./rebuild-rankings";
-import { sendWhatsAppTemplate } from "@/lib/whatsapp";
-import { whatsappTemplates } from "@/lib/whatsapp-templates";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/send-whatsapp-template";
+import { whatsappTemplates } from "@/lib/whatsapp/whatsapp-templates";
+import { getOrCreateSession } from "@/lib/conversation/get-or-create-session";
+import { ConversationChannel, ConversationState, Prisma } from "@prisma/client";
 
 type WhatsAppParameter =
   | string
@@ -254,6 +256,25 @@ async function sendMatchResultWhatsApps(
           providerResponse:
             result.providerResponse
         }
+      });
+
+      const session =
+        await getOrCreateSession(
+            ConversationChannel.whatsapp,
+            user.whatsappNumber!
+        );
+
+      session.state = ConversationState.main_menu;
+
+      await prisma.conversationSession.update({
+          where: {
+              id: session.id
+          },
+          data: {
+              state: session.state,
+              context: Prisma.DbNull,
+              lastMessageAt: new Date()
+          }
       });
 
       sent++;

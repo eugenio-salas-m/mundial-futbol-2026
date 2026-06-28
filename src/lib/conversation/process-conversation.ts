@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send-whatsapp-message";
-import { getOrCreateSession } from "./get-or-create-session";
-import { ConversationChannel } from "@prisma/client";
+import { getOrCreateSession } from "@/lib/conversation/get-or-create-session";
+import { ConversationChannel, ConversationState  } from "@prisma/client";
+import { handleMatchReminderConversation } from "./handlers/match-reminder";
 
 export interface ConversationRequest {
     channel: ConversationChannel;
@@ -10,76 +11,127 @@ export interface ConversationRequest {
     messageId: string;
     timestamp: number;
     text: string;
+    buttonId?: string;
 }
 
 export async function processConversation(
   request: ConversationRequest
 ) {
 
-  console.log(
-    "[CONVERSATION]",
-    request
-  );
-
-  const session =
-    await getOrCreateSession(
-        request.channel,
-        request.phoneNumber
+    console.log(
+        "[CONVERSATION]",
+        request
     );
 
-  //
-  // Registrar mensaje entrante
-  //
+    const session =
+        await getOrCreateSession(
+            request.channel,
+            request.phoneNumber!
+        );
 
-  await prisma.conversationMessage.create({
+    const user =
+        await prisma.user.findFirst({
+          where: {
+            whatsappNumber:
+              request.phoneNumber
+          }
+        });
 
-    data: {
 
-      sessionId:
-        session.id,
+    const normalizedText =
+        request.text.trim().toLowerCase();
 
-      direction:
-        "incoming",
 
-      messageType:
-        "text",
+    const lastNotification =
+        user
+          ? await prisma.notificationLog.findFirst({
+              where: {
+                userId: user.id,
+                channel: "whatsapp",
+                status: {
+                  in: [
+                    "delivered",
+                    "read"
+                  ]
+                }
+              },
+              orderBy: {
+                createdAt: "desc"
+              }
+            })
+          : null;
 
-      text:
-        request.text,
+    
+    //
+    // Registrar mensaje entrante
+    //
 
-      providerMessageId:
-        request.messageId,
-
-      payload:
-        {
-            text: request.text,
-            messageId: request.messageId,
-            channel: request.channel.toString(),
-            phoneNumber: request.phoneNumber,
-            timestamp: request.timestamp,
-            userName: request.userName
+    await prisma.conversationMessage.create({
+        data: {
+        sessionId:
+            session.id,
+        direction:
+            "incoming",
+        messageType:
+            "text",
+        text:
+            request.text,
+        providerMessageId:
+            request.messageId,
+        notificationLogId:
+            lastNotification?.id ?? undefined,
+        payload:
+            {
+                text: request.text,
+                messageId: request.messageId,
+                channel: request.channel.toString(),
+                phoneNumber: request.phoneNumber,
+                timestamp: request.timestamp,
+                userName: request.userName
+            }
         }
+    });
 
+    if (
+        user &&
+        session &&
+        lastNotification &&
+        lastNotification.templateCode === "match_reminder" &&
+        (lastNotification.status === "delivered" || lastNotification.status === "read") && 
+        lastNotification.matchId
+    ) {
+
+        await prisma.conversationSession.update({
+            where: {
+              id: session.id
+            },
+            data: {
+              userId: user.id,
+              organizationId: user.organizationId,
+              lastMessageAt: new Date()
+            }
+          });
+
+        session.userId =
+            user.id;
+
+        session.organizationId =
+            user.organizationId;
+          
+        await handleMatchReminderConversation({
+            session,
+            notificationLog: lastNotification,
+            request
+        });
+        return;
     }
 
-  });
+    let response = "Recibí tu mensaje correctamente.";
+    session.state = ConversationState.main_menu;
 
-  const text =
-    request.text
-      .trim()
-      .toLowerCase();
-
-  let response =
-    "Recibí tu mensaje correctamente.";
-
-  let newState =
-    session.state;
-
-  switch (text) {
-
-    case "hola":
-
-      response =
+    switch (normalizedText) {
+        case "hola":
+            response =
 `Hola ${request.userName ?? ""} 👋
 
 Soy el asistente de Mundial Fútbol 2026 ⚽
@@ -94,20 +146,14 @@ Puedo ayudarte con:
 
 Escribe lo que necesitas.`;
 
-      newState =
-        "main_menu";
-
-      break;
+        
+        break;
 
     case "ranking":
-
-      response =
-        "Pronto podrás consultar tu ranking directamente desde WhatsApp.";
-
+      response = "Pronto podrás consultar tu ranking directamente desde WhatsApp.";
       break;
 
     case "ayuda":
-
       response =
 `Puedo ayudarte a:
 
@@ -121,50 +167,23 @@ Muy pronto también responderé preguntas usando IA.`;
 
       break;
 
-  }
-
-  const responseMessage =
-    await sendWhatsAppMessage(
-        request.phoneNumber,
-        response
-    );
-
-  //
-  // Registrar mensaje saliente
-  //
-
-  await prisma.conversationMessage.create({
-    data: {
-      sessionId:
-        session.id,
-      direction:
-        "outgoing",
-      messageType:
-        "text",
-      text:
-        response,
-      providerMessageId:
-        responseMessage.providerMessageId,
-      payload:
-        responseMessage.providerResponse
     }
-  });
 
-  //
-  // Actualizar sesión
-  //
+    const responseMessage =
+        await sendWhatsAppMessage({
+            session,
+            phoneNumber: request.phoneNumber,
+            text: response,
+            notificationLogId: lastNotification?.id
+        });
 
-  await prisma.conversationSession.update({
-    where: {
-      id:
-        session.id
-    },
-    data: {
-      state:
-        newState,
-      lastMessageAt:
-        new Date()
-    }
-  });
+    await prisma.conversationSession.update({
+        where: {
+            id: session.id
+        },
+        data: {
+            state: session.state
+        }
+    });
 
 }
