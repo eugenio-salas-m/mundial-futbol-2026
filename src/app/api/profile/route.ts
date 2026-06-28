@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { normalizePhoneNumber } from "@/lib/utils/phone";
 
 export async function POST(
   request: Request
@@ -98,7 +99,7 @@ export async function PUT(
             body.nickname,
         
         whatsappNumber:
-            body.whatsappNumber,
+          normalizePhoneNumber(body.whatsappNumber),
         
         whatsappOptIn:
             body.whatsappOptIn,

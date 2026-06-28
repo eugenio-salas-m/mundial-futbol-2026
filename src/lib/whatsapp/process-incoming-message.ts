@@ -1,5 +1,6 @@
 import { processConversation } from "@/lib/conversation/process-conversation";
 import { ConversationChannel } from "@prisma/client";
+import { normalizePhoneNumber } from "@/lib/utils/phone";
 
 export async function processIncomingMessage(
     message: any,
@@ -46,7 +47,7 @@ export async function processIncomingMessage(
         channel:
             ConversationChannel.whatsapp,
         phoneNumber:
-            message.from,
+            normalizePhoneNumber(message.from),
         userName:
             contact?.profile?.name,
         messageId:
