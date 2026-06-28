@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-client";
+import QualifiedTeamSelector from "@/components/QualifiedTeamSelector";
+
+type MatchScore = {
+  homeGoals: number | null;
+  awayGoals: number | null;
+  qualifiedTeamId: string | null;
+};
 
 export default function AuthenticatedHome() {
 
@@ -20,15 +27,9 @@ export default function AuthenticatedHome() {
     
   const [todayPredictions,
     setTodayPredictions] =
-    useState<
-      Record<
-        string,
-        {
-          homeGoals: string;
-          awayGoals: string;
-        }
-      >
-    >({});
+    useState<Record<string, MatchScore>>(
+      {}
+    );
 
     const [selectedMatch,
       setSelectedMatch] =
@@ -194,7 +195,7 @@ export default function AuthenticatedHome() {
           );
 
           const predictionMap:
-            Record<string, any> = {};
+            Record<string, MatchScore> = {};
 
           todayData.forEach(
             (match: any) => {
@@ -205,13 +206,15 @@ export default function AuthenticatedHome() {
 
                 homeGoals:
                   match.predictions?.[0]
-                    ?.homeGoals
-                    ?.toString() ?? "",
-
+                    ?.homeGoals ?? null,
+      
                 awayGoals:
                   match.predictions?.[0]
-                    ?.awayGoals
-                    ?.toString() ?? ""
+                    ?.awayGoals ?? null,
+      
+                qualifiedTeamId:
+                  match.predictions?.[0]
+                    ?.qualifiedTeamId  ?? null,
 
               };
 
@@ -331,29 +334,38 @@ export default function AuthenticatedHome() {
     ranking.myPosition ===
     ranking.participantCount;
 
-    const savePrediction =
+  const savePrediction =
     async (
-      matchId: string
+      matchId: string,
+      current?: MatchScore
     ) => {
   
-      const current =
-        todayPredictions[
-          matchId
-        ];
-  
-      if (
-        current.homeGoals === "" ||
-        current.awayGoals === ""
-      ) {
-  
-        alert(
-          "Ingrese ambos marcadores"
-        );
-  
+      const prediction =
+        current ?? todayPredictions[matchId];
+
+      if (!prediction) {
         return;
-  
+      }
+
+      if (
+        prediction.homeGoals === null ||
+        prediction.awayGoals === null
+      ) {
+        return;
       }
   
+      const match =
+        todayMatches.find(m => m.id === matchId);
+
+      if (
+        match &&
+        match.stage !== "group_stage" &&
+        prediction.homeGoals === prediction.awayGoals &&
+        !prediction.qualifiedTeamId
+      ) {
+        return;
+      }
+
       const supabase =
         createClient();
   
@@ -381,14 +393,13 @@ export default function AuthenticatedHome() {
               matchId,
   
               homeGoals:
-                parseInt(
-                  current.homeGoals
-                ),
+                  prediction.homeGoals,
   
               awayGoals:
-                parseInt(
-                  current.awayGoals
-                )
+                prediction.awayGoals,
+              
+              qualifiedTeamId: 
+                prediction.qualifiedTeamId
   
             })
           }
@@ -415,6 +426,9 @@ export default function AuthenticatedHome() {
       
         }, 5000);
   
+      }else{
+        const error = await response.json();
+        alert(error.error);
       }
   
     };
@@ -424,30 +438,60 @@ export default function AuthenticatedHome() {
         matchId: string
       ) => {
 
-        const current =
-          todayPredictions[
-            matchId
-          ];
-
-        if (
-          !current
-        ) {
-          return;
-        }
-
-        if (
-          current.homeGoals === "" ||
-          current.awayGoals === ""
-        ) {
-          return;
-        }
-
         await savePrediction(
-          matchId
+          matchId,
+          {
+            ...todayPredictions[matchId]
+          }
         );
 
-      };
+    };
       
+    const updateTodayPrediction = (
+      match: any,
+      side: "home" | "away",
+      value: string
+    ) => {
+    
+      setTodayPredictions(prev => {
+    
+        const field =
+          side === "home"
+            ? "homeGoals"
+            : "awayGoals";
+
+        const current = {
+          ...prev[match.id],
+          [field]:
+            value === ""
+              ? null
+              : parseInt(value),
+        };
+        
+    
+        if (current.homeGoals !== null && current.awayGoals !== null) {
+    
+          if (current.homeGoals > current.awayGoals) {
+            current.qualifiedTeamId =
+              match.homeTeam.id;
+          } else if (current.awayGoals > current.homeGoals) {
+            current.qualifiedTeamId =
+              match.awayTeam.id;
+          }
+          // empate -> mantener la selección actual
+    
+        }
+    
+        return {
+          ...prev,
+          [match.id]: current,
+        };
+    
+      });
+    
+    };
+
+
       const isLastOrTied =
         ranking &&
         ranking.participantCount > 1 &&
@@ -745,6 +789,9 @@ export default function AuthenticatedHome() {
     match
   ) => {
 
+    const isKnockout =
+      match.stage !== "group_stage";
+
     const editable =
       match.status ===
         "scheduled"
@@ -861,22 +908,10 @@ export default function AuthenticatedHome() {
               ]?.homeGoals ?? ""
             }
             onChange={e =>
-              setTodayPredictions(
-                {
-                  ...todayPredictions,
-
-                  [match.id]: {
-
-                    ...todayPredictions[
-                      match.id
-                    ],
-
-                    homeGoals:
-                      e.target.value
-
-                  }
-
-                }
+              updateTodayPrediction(
+                match,
+                "home",
+                e.target.value
               )
             }
             onBlur={() =>
@@ -886,8 +921,11 @@ export default function AuthenticatedHome() {
             }
             onKeyDown={async (e) => {
               if (e.key === "Enter") {
-                await handleTodayBlur(
-                  match.id
+                await savePrediction(
+                  match.id,
+                  {
+                    ...todayPredictions[match.id]
+                  }
                 );
                 (
                   e.target as HTMLInputElement
@@ -936,22 +974,10 @@ export default function AuthenticatedHome() {
               ]?.awayGoals ?? ""
             }
             onChange={e =>
-              setTodayPredictions(
-                {
-                  ...todayPredictions,
-
-                  [match.id]: {
-
-                    ...todayPredictions[
-                      match.id
-                    ],
-
-                    awayGoals:
-                      e.target.value
-
-                  }
-
-                }
+              updateTodayPrediction(
+                match,
+                "away",
+                e.target.value
               )
             }
             onBlur={() =>
@@ -961,8 +987,11 @@ export default function AuthenticatedHome() {
             }
             onKeyDown={async (e) => {
               if (e.key === "Enter") {
-                await handleTodayBlur(
-                  match.id
+                await savePrediction(
+                  match.id,
+                  {
+                    ...todayPredictions[match.id]
+                  }
                 );
                 (
                   e.target as HTMLInputElement
@@ -1057,6 +1086,40 @@ export default function AuthenticatedHome() {
           </div>
 
         </div>
+
+        {isKnockout && (
+          <QualifiedTeamSelector
+              homeTeamId={match.homeTeam.id}
+              awayTeamId={match.awayTeam.id}
+              homeTeamName={match.homeTeam.name}
+              awayTeamName={match.awayTeam.name}
+              selectedTeamId={todayPredictions[match.id]?.qualifiedTeamId ?? null}
+              disabled={
+                todayPredictions[match.id]?.homeGoals !==
+                todayPredictions[match.id]?.awayGoals
+              }
+              onChange={async (teamId) => {
+
+                const updated = {
+                  ...todayPredictions[match.id],
+                  qualifiedTeamId: teamId,
+                };
+              
+                setTodayPredictions(prev => ({
+                  ...prev,
+                  [match.id]: updated,
+                }));
+              
+                await savePrediction(
+                  match.id,
+                  updated
+                );
+
+                (document.activeElement as HTMLElement)?.blur();
+
+              }}
+          />
+      )}
 
       </div>
     );

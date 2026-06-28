@@ -11,7 +11,8 @@ export async function POST(
       authUserId,
       matchId,
       homeGoals,
-      awayGoals
+      awayGoals,
+      qualifiedTeamId
     } = await request.json();
 
     const user =
@@ -55,6 +56,66 @@ export async function POST(
     }
 
     if (
+      homeGoals < 0 ||
+      awayGoals < 0
+    ) {
+      return NextResponse.json(
+        {
+          error: "Marcador erróneo",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      homeGoals > 99 ||
+      awayGoals > 99
+    ) {
+      return NextResponse.json(
+        {
+          error: "Marcador erróneo",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+
+    if (
+      match?.stage !== "group_stage" &&
+      homeGoals === awayGoals &&
+      !qualifiedTeamId
+    ) {
+      return NextResponse.json(
+        {
+          error: "Debe seleccionar el equipo clasificado.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      qualifiedTeamId &&
+      qualifiedTeamId !== match?.homeTeamId &&
+      qualifiedTeamId !== match?.awayTeamId
+    ) {
+      return NextResponse.json(
+        {
+          error: "Equipo clasificado inválido.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+
+    if (
       match.predictionClosesAt <
       new Date()
     ) {
@@ -71,6 +132,15 @@ export async function POST(
 
     }
 
+    let winnerTeamId = qualifiedTeamId;
+
+    if (homeGoals > awayGoals) {
+      winnerTeamId = match.homeTeamId;
+    } else if (awayGoals > homeGoals) {
+      winnerTeamId = match.awayTeamId;
+    }
+
+
     await prisma.prediction.upsert({
       where: {
         userId_matchId: {
@@ -80,13 +150,15 @@ export async function POST(
       },
       update: {
         homeGoals,
-        awayGoals
+        awayGoals,
+        qualifiedTeamId: winnerTeamId
       },
       create: {
         userId: user.id,
         matchId,
         homeGoals,
-        awayGoals
+        awayGoals,
+        qualifiedTeamId: winnerTeamId
       }
     });
 

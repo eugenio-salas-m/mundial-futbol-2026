@@ -88,6 +88,10 @@ function calculateKnockoutPoints(
   switch (stage) {
 
     case "round_of_32":
+      qualifiedValue = 2;
+      exactValue = 4;
+      break;
+      
     case "round_of_16":
       qualifiedValue = 2;
       exactValue = 4;

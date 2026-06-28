@@ -4,11 +4,50 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase-client";
 import PageHeader from "@/components/page-header";
+import QualifiedTeamSelector from "@/components/QualifiedTeamSelector";
 
 type MatchScore = {
   homeGoals: number | null;
   awayGoals: number | null;
+  qualifiedTeamId: string | null;
 };
+
+const getStageTitle = (
+  match: {
+    stage: string;
+    groupCode: string | null;
+  }
+) => {
+
+  if (match.stage === "group_stage")
+      return `Grupo ${match.groupCode}`;
+
+  switch (match.stage) {
+
+      case "round_of_32":
+          return "16avos de Final";
+
+      case "round_of_16":
+          return "Octavos de Final";
+
+      case "quarter_final":
+          return "Cuartos de Final";
+
+      case "semi_final":
+          return "Semifinal";
+
+      case "third_place":
+          return "Tercer Lugar";
+
+      case "final":
+          return "Final";
+
+      default:
+          return "";
+  }
+
+};
+
 
 export default function PredictionsPage() {
 
@@ -80,8 +119,11 @@ export default function PredictionsPage() {
 
           awayGoals:
             match.predictions?.[0]
-              ?.awayGoals ?? null
+              ?.awayGoals ?? null,
 
+          qualifiedTeamId:
+            match.predictions?.[0]
+              ?.qualifiedTeamId  ?? null,
         };
 
       }
@@ -97,6 +139,13 @@ export default function PredictionsPage() {
 
     setLoading(false);
 
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 100);
+
   };
 
   useEffect(() => {
@@ -107,15 +156,32 @@ export default function PredictionsPage() {
 
   const savePrediction =
     async (
-      matchId: string
+      matchId: string,
+      current?: MatchScore
     ) => {
 
-      const current =
-        scores[matchId];
+      const prediction =
+        current ?? scores[matchId];
+
+      if (!prediction) {
+        return;
+      }
 
       if (
-        current.homeGoals === null ||
-        current.awayGoals === null
+        prediction.homeGoals === null ||
+        prediction.awayGoals === null
+      ) {
+        return;
+      }
+
+      const match =
+        matches.find(m => m.id === matchId);
+
+      if (
+        match &&
+        match.stage !== "group_stage" &&
+        prediction.homeGoals === prediction.awayGoals &&
+        !prediction.qualifiedTeamId
       ) {
         return;
       }
@@ -144,9 +210,11 @@ export default function PredictionsPage() {
                 data.user.id,
               matchId,
               homeGoals:
-                current.homeGoals,
+                prediction.homeGoals,
               awayGoals:
-                current.awayGoals
+                prediction.awayGoals,
+              qualifiedTeamId: 
+                prediction.qualifiedTeamId
             })
           }
         );
@@ -171,6 +239,9 @@ export default function PredictionsPage() {
 
         }, 5000);
 
+      }else{
+        const error = await response.json();
+        alert(error.error);
       }
 
     };
@@ -180,55 +251,138 @@ export default function PredictionsPage() {
       matchId: string
     ) => {
 
-      const current =
-        scores[matchId];
-
-      if (
-        current.homeGoals !== null &&
-        current.awayGoals !== null
-      ) {
-
-        await savePrediction(
-          matchId
-        );
-
-      }
+      await savePrediction(
+        matchId,
+        {
+          ...scores[matchId]
+        }
+      );
 
     };
 
-  const groupedMatches =
-    matches.reduce(
-      (
-        acc: Record<
-          string,
-          any[]
-        >,
-        match
-      ) => {
+    const updateScore = (
+      match: any,
+      side: "home" | "away",
+      value: string
+    ) => {
+    
+      setScores(prev => {
+    
+        const field =
+          side === "home"
+            ? "homeGoals"
+            : "awayGoals";
 
-        const group =
-          match.groupCode;
-
-        if (!acc[group]) {
-
-          acc[group] = [];
-
+        const current = {
+          ...prev[match.id],
+          [field]:
+            value === ""
+              ? null
+              : parseInt(value),
+        };
+    
+        if (
+          current.homeGoals !== null &&
+          current.awayGoals !== null
+        ) {
+    
+          if (current.homeGoals > current.awayGoals) {
+    
+            current.qualifiedTeamId =
+              match.homeTeam.id;
+    
+          } else if (
+            current.awayGoals >
+            current.homeGoals
+          ) {
+    
+            current.qualifiedTeamId =
+              match.awayTeam.id;
+    
+          }
+          // empate:
+          // mantenemos la selección existente
         }
+    
+        return {
+          ...prev,
+          [match.id]: current,
+        };
+    
+      });
+    
+    };
 
-        acc[group].push(
-          match
-        );
 
-        return acc;
+  const getSectionKey = (match: any) => {
+    switch (match.stage) {
+      case "group_stage":
+        return `Grupo ${match.groupCode}`;
+  
+      case "round_of_32":
+        return "16avos de Final";
+  
+      case "round_of_16":
+        return "Octavos de Final";
+  
+      case "quarter_final":
+        return "Cuartos de Final";
+  
+      case "semi_final":
+        return "Semifinales";
+  
+      case "third_place":
+        return "Tercer Lugar";
+  
+      case "final":
+        return "Final";
+  
+      default:
+        return "Otros";
+    }
+  };
 
-      },
-      {}
-    );
+  const groupedMatches = matches.reduce(
+    (acc: Record<string, any[]>, match) => {
+  
+      const key = getSectionKey(match);
+  
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+  
+      acc[key].push(match);
+  
+      return acc;
+  
+    },
+    {}
+  );
 
-  const orderedGroups =
-    Object.keys(
-      groupedMatches
-    ).sort();
+  const sectionOrder = [
+    "Grupo A",
+    "Grupo B",
+    "Grupo C",
+    "Grupo D",
+    "Grupo E",
+    "Grupo F",
+    "Grupo G",
+    "Grupo H",
+    "Grupo I",
+    "Grupo J",
+    "Grupo K",
+    "Grupo L",
+    "16avos de Final",
+    "Octavos de Final",
+    "Cuartos de Final",
+    "Semifinales",
+    "Tercer Lugar",
+    "Final",
+  ];
+
+  const orderedGroups = sectionOrder.filter(
+    section => groupedMatches[section]
+  );
 
   if (loading) {
 
@@ -293,12 +447,15 @@ export default function PredictionsPage() {
                     text-lg
                   "
                 >
-                  Grupo {groupCode}
+                  {groupCode}
                 </div>
 
                 <div className="p-4 space-y-4">
 
-                  {[0, 2, 4].map(
+                  {Array.from(
+                    { length: Math.ceil(matches.length / 2) },
+                    (_, i) => i * 2
+                  ).map(
                     (
                       startIndex
                     ) => {
@@ -329,6 +486,9 @@ export default function PredictionsPage() {
                               (
                                 match
                               ) => {
+
+                                const isKnockout =
+                                  match.stage !== "group_stage";
 
                                 const editable =
                                   match.status ===
@@ -458,26 +618,11 @@ export default function PredictionsPage() {
                                         onChange={(
                                           e
                                         ) =>
-                                          setScores({
-                                            ...scores,
-                                            [match.id]:
-                                              {
-                                                ...scores[
-                                                  match.id
-                                                ],
-                                                homeGoals:
-                                                  e
-                                                    .target
-                                                    .value ===
-                                                  ""
-                                                    ? null
-                                                    : parseInt(
-                                                        e
-                                                          .target
-                                                          .value
-                                                      )
-                                              }
-                                          })
+                                          updateScore(
+                                            match,
+                                            "home",
+                                            e.target.value
+                                          )
                                         }
                                         onBlur={() =>
                                           handleBlur(
@@ -486,8 +631,11 @@ export default function PredictionsPage() {
                                         }
                                         onKeyDown={async (e) => {
                                           if (e.key === "Enter") {
-                                            await handleBlur(
-                                              match.id
+                                            await savePrediction(
+                                              match.id,
+                                              {
+                                                ...scores[match.id]
+                                              }
                                             );
                                             (
                                               e.target as HTMLInputElement
@@ -535,26 +683,11 @@ export default function PredictionsPage() {
                                         onChange={(
                                           e
                                         ) =>
-                                          setScores({
-                                            ...scores,
-                                            [match.id]:
-                                              {
-                                                ...scores[
-                                                  match.id
-                                                ],
-                                                awayGoals:
-                                                  e
-                                                    .target
-                                                    .value ===
-                                                  ""
-                                                    ? null
-                                                    : parseInt(
-                                                        e
-                                                          .target
-                                                          .value
-                                                      )
-                                              }
-                                          })
+                                          updateScore(
+                                            match,
+                                            "away",
+                                            e.target.value
+                                          )
                                         }
                                         onBlur={() =>
                                           handleBlur(
@@ -563,8 +696,11 @@ export default function PredictionsPage() {
                                         }
                                         onKeyDown={async (e) => {
                                           if (e.key === "Enter") {
-                                            await handleBlur(
-                                              match.id
+                                            await savePrediction(
+                                              match.id,
+                                              {
+                                                ...scores[match.id]
+                                              }
                                             );
                                             (
                                               e.target as HTMLInputElement
@@ -643,7 +779,39 @@ export default function PredictionsPage() {
                                           )}
                                         </div>
                                       </div>
+                                      {isKnockout && (
+                                          <QualifiedTeamSelector
+                                              homeTeamId={match.homeTeam.id}
+                                              awayTeamId={match.awayTeam.id}
+                                              homeTeamName={match.homeTeam.name}
+                                              awayTeamName={match.awayTeam.name}
+                                              selectedTeamId={scores[match.id]?.qualifiedTeamId ?? null}
+                                              disabled={
+                                                scores[match.id]?.homeGoals !==
+                                                scores[match.id]?.awayGoals
+                                              }
+                                              onChange={async (teamId) => {
+                                                
+                                                const updated = {
+                                                  ...scores[match.id],
+                                                  qualifiedTeamId: teamId,
+                                                };
+                                              
+                                                setScores(prev => ({
+                                                  ...prev,
+                                                  [match.id]: updated,
+                                                }));
+                                              
+                                                await savePrediction(
+                                                  match.id,
+                                                  updated
+                                                );
 
+                                                (document.activeElement as HTMLElement)?.blur();
+
+                                              }}
+                                          />
+                                      )}
                                     </div>
                                   </div>
                                 );

@@ -7,7 +7,9 @@ export async function sendMatchReminders(userId?: string) {
   // Buscar la próxima hora de inicio
   //
 
-  const REMINDER_WINDOW_HOURS = 6;
+  let REMINDER_WINDOW_HOURS = 6;
+  if(userId)
+    REMINDER_WINDOW_HOURS=12;
 
   const now =
     new Date();
