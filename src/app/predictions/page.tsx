@@ -779,7 +779,10 @@ export default function PredictionsPage() {
                                           )}
                                         </div>
                                       </div>
-                                      {isKnockout && (
+                                      
+                                    </div>
+
+                                    {isKnockout && (
                                           <QualifiedTeamSelector
                                               homeTeamId={match.homeTeam.id}
                                               awayTeamId={match.awayTeam.id}
@@ -812,7 +815,7 @@ export default function PredictionsPage() {
                                               }}
                                           />
                                       )}
-                                    </div>
+                                      
                                   </div>
                                 );
 
