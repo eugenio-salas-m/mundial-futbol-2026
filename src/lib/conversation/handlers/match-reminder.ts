@@ -557,7 +557,9 @@ ${process.env.NEXT_PUBLIC_SITE_URL}`;
                 homeGoals:
                     suggestion.homeGoals,
                 awayGoals:
-                    suggestion.awayGoals
+                    suggestion.awayGoals,
+                winner:
+                    context.winner
             });
 
         if (

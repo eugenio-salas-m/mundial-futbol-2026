@@ -121,15 +121,16 @@ Con la información entregada:
 winner puede ser:
 - home
 - away
-- draw
 
 2. Genera exactamente cinco marcadores distintos.
 
 3. Todos los marcadores deben ser coherentes con el mismo ganador.
 
-4. Ordénalos desde el más probable al menos probable.
+4. Puede existir un ganador con un marcador en empate, para los partidos muy ajustados donde el ganador se clasifica por definicion a penales, pero los penales no cuentan en el marcador
 
-5. Escribe una explicación breve en español (máximo 180 caracteres).
+5. Ordénalos desde el más probable al menos probable.
+
+6. Escribe una explicación breve en español (máximo 180 caracteres).
 
 Formato:
 
@@ -147,7 +148,7 @@ Formato:
     },
     {
       "homeGoals":1,
-      "awayGoals":0
+      "awayGoals":1
     },
     {
       "homeGoals":2,
