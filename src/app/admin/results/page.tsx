@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase-client";
 import PageHeader from "@/components/page-header";
+import QualifiedTeamSelector from "@/components/QualifiedTeamSelector";
 
 type MatchResultState = {
   homeGoals: number | null;
   awayGoals: number | null;
+  qualifiedTeamId: string | null;
 };
 
 export default function AdminResultsPage() {
@@ -37,13 +39,19 @@ export default function AdminResultsPage() {
       const data =
         await response.json();
 
+      const knockoutMatches =
+        data.filter(
+          (match: any) =>
+            match.stage !== "group_stage"
+        );
+
       const initialResults:
         Record<
           string,
           MatchResultState
         > = {};
 
-      data.forEach(
+      knockoutMatches.forEach(
         (match: any) => {
 
           initialResults[
@@ -58,8 +66,10 @@ export default function AdminResultsPage() {
             awayGoals:
               match.result
                 ?.awayGoals ??
-              null
+              null,
 
+            qualifiedTeamId:
+              match.result?.qualifiedTeamId ?? null
           };
 
         }
@@ -70,7 +80,7 @@ export default function AdminResultsPage() {
       );
 
       setMatches(
-        data
+        knockoutMatches
       );
 
       setLoading(false);
@@ -82,6 +92,68 @@ export default function AdminResultsPage() {
     loadMatches();
 
   }, []);
+
+  const updateResult = (
+    match: any,
+    side: "home" | "away",
+    value: string
+  ) => {
+  
+    setResults(prev => {
+  
+      const current = {
+        ...prev[match.id]
+      };
+  
+      if (side === "home") {
+  
+        current.homeGoals =
+          value === ""
+            ? null
+            : parseInt(value);
+  
+      } else {
+  
+        current.awayGoals =
+          value === ""
+            ? null
+            : parseInt(value);
+  
+      }
+  
+      if (
+        current.homeGoals !== null &&
+        current.awayGoals !== null
+      ) {
+  
+        if (
+          current.homeGoals >
+          current.awayGoals
+        ) {
+  
+          current.qualifiedTeamId =
+            match.homeTeam.id;
+  
+        } else if (
+          current.awayGoals >
+          current.homeGoals
+        ) {
+  
+          current.qualifiedTeamId =
+            match.awayTeam.id;
+  
+        }
+  
+      }
+  
+      return {
+        ...prev,
+        [match.id]: current
+      };
+  
+    });
+  
+  };
 
   const saveResult =
     async (
@@ -100,6 +172,25 @@ export default function AdminResultsPage() {
 
         alert(
           "Debe ingresar ambos marcadores"
+        );
+
+        return;
+      }
+
+      const match =
+          matches.find(
+            m => m.id === matchId
+          );
+
+      if (
+        match.stage !== "group_stage" &&
+        current.homeGoals ===
+        current.awayGoals &&
+        !current.qualifiedTeamId
+      ) {
+
+        alert(
+          "Debe seleccionar el equipo clasificado."
         );
 
         return;
@@ -138,7 +229,9 @@ export default function AdminResultsPage() {
               homeGoals:
                 current.homeGoals,
               awayGoals:
-                current.awayGoals
+                current.awayGoals,
+              qualifiedTeamId:
+                current.qualifiedTeamId
             })
           }
         );
@@ -259,6 +352,9 @@ export default function AdminResultsPage() {
 
                     const hasResult =
                       !!match.result;
+                    
+                    const isKnockout =
+                      match.stage !== "group_stage";
 
                     return (
 
@@ -355,31 +451,11 @@ export default function AdminResultsPage() {
                                 ?.homeGoals ??
                               ""
                             }
-                            onChange={(
-                              e
-                            ) =>
-                              setResults(
-                                {
-                                  ...results,
-                                  [match.id]:
-                                    {
-                                      ...results[
-                                        match
-                                          .id
-                                      ],
-                                      homeGoals:
-                                        e
-                                          .target
-                                          .value ===
-                                        ""
-                                          ? null
-                                          : parseInt(
-                                              e
-                                                .target
-                                                .value
-                                            )
-                                    }
-                                }
+                            onChange={(e) =>
+                              updateResult(
+                                match,
+                                "home",
+                                e.target.value
                               )
                             }
                             className={`
@@ -410,31 +486,11 @@ export default function AdminResultsPage() {
                                 ?.awayGoals ??
                               ""
                             }
-                            onChange={(
-                              e
-                            ) =>
-                              setResults(
-                                {
-                                  ...results,
-                                  [match.id]:
-                                    {
-                                      ...results[
-                                        match
-                                          .id
-                                      ],
-                                      awayGoals:
-                                        e
-                                          .target
-                                          .value ===
-                                        ""
-                                          ? null
-                                          : parseInt(
-                                              e
-                                                .target
-                                                .value
-                                            )
-                                    }
-                                }
+                            onChange={(e) =>
+                              updateResult(
+                                match,
+                                "away",
+                                e.target.value
                               )
                             }
                             className={`
@@ -490,6 +546,50 @@ export default function AdminResultsPage() {
                           </div>
 
                         </div>
+
+                        {isKnockout && (
+
+                          <div className="mt-3">
+
+                            <QualifiedTeamSelector
+                              homeTeamId={match.homeTeam.id}
+                              awayTeamId={match.awayTeam.id}
+                              homeTeamName={match.homeTeam.name}
+                              awayTeamName={match.awayTeam.name}
+                              selectedTeamId={
+                                results[match.id]
+                                  ?.qualifiedTeamId
+                              }
+                              disabled={
+                                results[match.id]
+                                  ?.homeGoals !==
+                                results[match.id]
+                                  ?.awayGoals
+                              }
+                              onChange={(teamId) =>
+
+                                setResults(prev => ({
+
+                                  ...prev,
+
+                                  [match.id]: {
+
+                                    ...prev[match.id],
+
+                                    qualifiedTeamId:
+                                      teamId
+
+                                  }
+
+                                }))
+
+                              }
+
+                            />
+
+                          </div>
+
+                        )}
 
                         <div
                           className="

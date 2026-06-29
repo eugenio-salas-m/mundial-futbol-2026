@@ -12,7 +12,8 @@ export async function POST(
     authUserId,
     matchId,
     homeGoals,
-    awayGoals
+    awayGoals,
+    qualifiedTeamId
   } = await request.json();
 
   const user =
@@ -57,6 +58,34 @@ export async function POST(
   
   }
   
+  const match =
+      await prisma.match.findUnique({
+        where: {
+          id: matchId
+        }
+      });
+
+  let winnerTeamId =
+    qualifiedTeamId;
+
+  if (
+    homeGoals > awayGoals
+  ) {
+
+    winnerTeamId =
+      match!.homeTeamId;
+
+  } else if (
+    awayGoals > homeGoals
+  ) {
+
+    winnerTeamId =
+      match!.awayTeamId;
+
+  }
+
+
+
   const existing =
     await prisma.matchResult.findFirst({
       where: {
@@ -72,7 +101,9 @@ export async function POST(
       },
       data: {
         homeGoals,
-        awayGoals
+        awayGoals,
+        qualifiedTeamId:
+          winnerTeamId
       }
     });
 
@@ -83,6 +114,8 @@ export async function POST(
         matchId,
         homeGoals,
         awayGoals,
+        qualifiedTeamId:
+          winnerTeamId,
         registeredByUserId:
           user.id
       }
