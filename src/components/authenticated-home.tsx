@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 import QualifiedTeamSelector from "@/components/QualifiedTeamSelector";
+import AvatarZoom from "@/components/avatar-zoom";
 
 type MatchScore = {
   homeGoals: number | null;
@@ -641,19 +642,16 @@ export default function AuthenticatedHome() {
 
     <div className="flex flex-col gap-4 items-center">
       
-      <img
-        src={
-          currentUser?.avatarUrl ??
+      <AvatarZoom
+        src={currentUser?.avatarUrl ??
           user.user_metadata
-            ?.avatar_url
-        }
-        alt=""
-        className="
-          w-24
-          h-24
-          rounded-full
-        "
+            ?.avatar_url}
+        alt={currentUser?.nickname ??
+          user.user_metadata
+            ?.full_name}
+        size={128}
       />
+
       <a
         href="/profile"
         className="

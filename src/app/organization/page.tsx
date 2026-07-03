@@ -10,6 +10,7 @@ import {
 } from "@/lib/supabase-client";
 
 import PageHeader from "@/components/page-header";
+import AvatarZoom from "@/components/avatar-zoom";
 
 export default function OrganizationPage() {
 
@@ -575,16 +576,10 @@ export default function OrganizationPage() {
                         {medal}
                       </div>
 
-                      <img
-                        src={
-                          participant.avatarUrl
-                        }
-                        alt=""
-                        className="
-                          w-10
-                          h-10
-                          rounded-full
-                        "
+                      <AvatarZoom
+                        src={participant.avatarUrl}
+                        alt={participant.nickname}
+                        size={48}
                       />
 
                       <div>

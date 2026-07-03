@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase-client";
 import PageHeader from "@/components/page-header";
+import AvatarZoom from "@/components/avatar-zoom";
 
 export default function OrganizationRankingPage() {
 
@@ -163,14 +164,10 @@ export default function OrganizationRankingPage() {
 
                   {participant.avatarUrl ? (
 
-                    <Image
-                      src={
-                        participant.avatarUrl
-                      }
-                      alt=""
-                      width={48}
-                      height={48}
-                      className="rounded-full"
+                    <AvatarZoom
+                      src={participant.avatarUrl}
+                      alt={participant.nickname}
+                      size={48}
                     />
 
                   ) : (
