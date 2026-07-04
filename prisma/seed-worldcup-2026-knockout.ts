@@ -3,28 +3,18 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const matches = [
-    ["2026-06-28T15:00:00-04:00", "RSA", "CAN"],
-  
-    ["2026-06-29T13:00:00-04:00", "BRA", "JPN"],
-    ["2026-06-29T16:30:00-04:00", "GER", "PAR"],
-    ["2026-06-29T21:00:00-04:00", "NED", "MAR"],
-  
-    ["2026-06-30T13:00:00-04:00", "CIV", "NOR"],
-    ["2026-06-30T17:00:00-04:00", "FRA", "SWE"],
-    ["2026-06-30T21:00:00-04:00", "MEX", "ECU"],
-  
-    ["2026-07-01T12:00:00-04:00", "ENG", "COD"],
-    ["2026-07-01T16:00:00-04:00", "BEL", "SEN"],
-    ["2026-07-01T20:00:00-04:00", "USA", "BIH"],
-  
-    ["2026-07-02T15:00:00-04:00", "ESP", "AUT"],
-    ["2026-07-02T19:00:00-04:00", "POR", "CRO"],
-    ["2026-07-02T23:00:00-04:00", "SUI", "ALG"],
-  
-    ["2026-07-03T14:00:00-04:00", "AUS", "EGY"],
-    ["2026-07-03T18:00:00-04:00", "ARG", "CPV"],
-    ["2026-07-03T21:30:00-04:00", "COL", "GHA"],
-  ];
+  ["2026-07-04T13:00:00-04:00", "CAN", "MAR"],
+  ["2026-07-04T17:00:00-04:00", "PAR", "FRA"],
+
+  ["2026-07-05T16:00:00-04:00", "BRA", "NOR"],
+  ["2026-07-05T20:00:00-04:00", "MEX", "ENG"],
+
+  ["2026-07-06T15:00:00-04:00", "POR", "ESP"],
+  ["2026-07-06T20:00:00-04:00", "USA", "BEL"],
+
+  ["2026-07-07T12:00:00-04:00", "ARG", "EGY"],
+  ["2026-07-07T16:00:00-04:00", "SUI", "COL"],
+];
 
 async function main() {
 
@@ -49,7 +39,7 @@ async function main() {
 
     const exists = await prisma.match.findFirst({
         where: {
-            stage: "round_of_32",
+            stage: "round_of_16",
             homeTeamId,
             awayTeamId,
         },
@@ -67,8 +57,8 @@ async function main() {
       data: {
         homeTeamId,
         awayTeamId,
-        stage: "round_of_32",
-        groupCode: null,
+        stage: "round_of_16",
+        groupCode: "8Avos",
         homeQualifier: null,
         awayQualifier: null,
         startsAtChile: startDate,
@@ -82,7 +72,7 @@ async function main() {
 
 main()
   .then(async () => {
-    console.log("World Cup 2026 Round of 32 seed completed.");
+    console.log("World Cup 2026 Round of 16 seed completed.");
     await prisma.$disconnect();
   })
   .catch(async (error) => {

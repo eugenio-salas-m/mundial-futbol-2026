@@ -88,7 +88,7 @@ export async function sendMatchReminder(
             phoneNumber:
                 user.whatsappNumber!,
             templateName:
-                "match_reminder",
+                "match_reminder_short",
             languageCode:
                 template.languageCode,
             parameters
