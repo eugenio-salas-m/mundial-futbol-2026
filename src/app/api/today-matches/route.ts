@@ -66,6 +66,27 @@ export async function POST(
       new Date()
     );
 
+  const tomorrow =
+    new Date();
+
+  tomorrow.setDate(
+    tomorrow.getDate() + 2
+  );
+
+  const chileTomorrow =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          "America/Santiago",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }
+    ).format(
+      tomorrow
+    );
+
   const matches =
     await prisma.match.findMany({
 
@@ -125,15 +146,6 @@ export async function POST(
             matchTime
           );
   
-        if (
-          matchDate ===
-          chileToday
-        ) {
-  
-          return true;
-  
-        }
-  
         const hourChile =
           Number(
             new Intl.DateTimeFormat(
@@ -148,33 +160,22 @@ export async function POST(
               matchTime
             )
           );
+
+        if (
+          matchDate >=
+          chileToday && 
+            (
+              matchDate <=
+              chileTomorrow &&
+              hourChile < 24
+            )
+        ) {
   
-        const tomorrow =
-          new Date();
+          return true;
   
-        tomorrow.setDate(
-          tomorrow.getDate() + 1
-        );
+        }
   
-        const chileTomorrow =
-          new Intl.DateTimeFormat(
-            "en-CA",
-            {
-              timeZone:
-                "America/Santiago",
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit"
-            }
-          ).format(
-            tomorrow
-          );
-  
-        return (
-          matchDate ===
-            chileTomorrow &&
-          hourChile < 24
-        );
+        
   
       }
     );

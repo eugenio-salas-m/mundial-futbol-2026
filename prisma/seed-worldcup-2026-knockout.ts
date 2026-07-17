@@ -3,17 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const matches = [
-  ["2026-07-04T13:00:00-04:00", "CAN", "MAR"],
-  ["2026-07-04T17:00:00-04:00", "PAR", "FRA"],
-
-  ["2026-07-05T16:00:00-04:00", "BRA", "NOR"],
-  ["2026-07-05T20:00:00-04:00", "MEX", "ENG"],
-
-  ["2026-07-06T15:00:00-04:00", "POR", "ESP"],
-  ["2026-07-06T20:00:00-04:00", "USA", "BEL"],
-
-  ["2026-07-07T12:00:00-04:00", "ARG", "EGY"],
-  ["2026-07-07T16:00:00-04:00", "SUI", "COL"],
+  ["2026-07-19T15:00:00-04:00", "ESP", "ARG"]
 ];
 
 async function main() {
@@ -39,7 +29,7 @@ async function main() {
 
     const exists = await prisma.match.findFirst({
         where: {
-            stage: "round_of_16",
+            stage: "final",
             homeTeamId,
             awayTeamId,
         },
@@ -57,8 +47,8 @@ async function main() {
       data: {
         homeTeamId,
         awayTeamId,
-        stage: "round_of_16",
-        groupCode: "8Avos",
+        stage: "final",
+        groupCode: "F",
         homeQualifier: null,
         awayQualifier: null,
         startsAtChile: startDate,
@@ -72,7 +62,7 @@ async function main() {
 
 main()
   .then(async () => {
-    console.log("World Cup 2026 Round of 16 seed completed.");
+    console.log("World Cup 2026 Final seed completed.");
     await prisma.$disconnect();
   })
   .catch(async (error) => {
