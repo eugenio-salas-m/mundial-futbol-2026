@@ -96,6 +96,11 @@ function calculateKnockoutPoints(
       exactValue = 8;
       break;
 
+    case "third_place":
+      qualifiedValue = 6;
+      exactValue = 12;
+      break;
+
     case "final":
       qualifiedValue = 6;
       exactValue = 12;
